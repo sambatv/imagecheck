@@ -1,0 +1,11 @@
+# build output
+imagecheck
+
+# direnv files
+.envrc
+
+# dotenv files
+.env
+
+# temp files
+tmp/

@@ -1,0 +1,17 @@
+# build output
+imagecheck
+
+# markdown files
+*.md
+
+# direnv files
+.envrc
+
+# dotenv files
+.env
+
+# asdf files
+.tool-versions
+
+# temp files
+tmp/

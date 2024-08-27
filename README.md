@@ -122,13 +122,13 @@ make build
 After building, the `imagecheck` binary will be available in the repository
 root directory.
 
-### User docker image from ghci.io registry
+### Use docker image from ghci.io registry
 
 The `imagecheck` docker image can be pulled from the `ghci.io` registry:
 
 ```shell
 docker pull ghcr.io/sambatv/imagecheck:latest
-docker run -it --rm ghcr.io/sambatv/imagecheck:latest --help
+docker run -it --rm ghcr.io/sambatv/imagecheck:v0.10.0 --help 
 ```
 
 The `imagecheck` binary is the entrypoint for the container image.
@@ -177,8 +177,11 @@ the following work remains to be done before that state is reached:
 * finish testing application reporting to S3 feature
 * add GitHub Actions pipeline that on a push of a version tag to the `main` branch:
   * runs application tests and linters
-  * creates a GitHub release with built application binaries for macOS and Linux on amd64 and arm64 architectures with the version tag
-  * builds the container image with the application binary and scanners for pushing to the `ghci.io` registry with the version tag
+  * creates a GitHub release with built application binaries for macOS and Linux
+    on amd64 and arm64 architectures with the version tag
+  * builds the container image with the application binary and scanners for
+    pushing to the `ghci.io` registry with the version tag
   * scans the built container image with itself
   * pushes the build container image to the ghci.io registry on success
-  * pushes the app docs to gh-pages branch for GitHub Pages hosting at https://sambatv.github.io/imagecheck (optional but nice to have)
+  * pushes the app docs to gh-pages branch for GitHub Pages hosting at
+    https://sambatv.github.io/imagecheck (optional but nice to have)

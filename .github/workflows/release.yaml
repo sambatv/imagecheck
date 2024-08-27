@@ -35,7 +35,7 @@ jobs:
 #        run: GOOS=darwin GOARCH=arm64 go build -ldflags "-X github.com/imagecheck/app.Version=${{ steps.version.outputs.VERSION }}" -o build/darwin/arm64/imagecheck .
 
       - name: Build Docker image with SHA tag
-        run: docker build -t ghcr.io/imagecheck:${{ github.sha }} .
+        run: docker build -t ghcr.io/sambatv/imagecheck:${{ github.sha }} .
 
       - name: Tag Docker image with version
         run: |

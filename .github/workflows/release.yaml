@@ -52,7 +52,7 @@ jobs:
       - name: Push Docker images
         run: |
           docker push ghcr.io/sambatv/imagecheck:${{ github.sha }}
-          docker push ghcr.io/sambatv/imagecheck:v${{ steps.version.outputs.VERSION }}
+          docker push ghcr.io/sambatv/imagecheck:v${{ steps.get_version.outputs.VERSION }}
 #
 #      - name: Release
 #        uses: softprops/action-gh-release@v2

@@ -13,26 +13,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-#      - name: Set up Go
-#        uses: actions/setup-go@v5
-#        with:
-#          go-version: '1.23.x'
-
       - name: Read application version
         id: get_version
         run: echo ::set-output name=VERSION::$(cat VERSION)
-
-#      - name: Build for Linux/Intel
-#        run: GOOS=linux GOARCH=amd64 go build -ldflags "-X github.com/imagecheck/app.Version=${{ steps.version.outputs.VERSION }}" -o build/linux/amd64/imagecheck .
-#
-#      - name: Build for Linux/Arm
-#        run: GOOS=linux GOARCH=arm64 go build -ldflags "-X github.com/imagecheck/app.Version=${{ steps.version.outputs.VERSION }}" -o build/linux/arm64/imagecheck .
-#
-#      - name: Build for macOS/Intel
-#        run: GOOS=darwin GOARCH=amd64 go build -ldflags "-X github.com/imagecheck/app.Version=${{ steps.version.outputs.VERSION }}" -o build/darwin/amd64/imagecheck .
-#
-#      - name: Build for macOS/Apple Silicon
-#        run: GOOS=darwin GOARCH=arm64 go build -ldflags "-X github.com/imagecheck/app.Version=${{ steps.version.outputs.VERSION }}" -o build/darwin/arm64/imagecheck .
 
       - name: Build Docker image with SHA tag
         run: docker build -t ghcr.io/sambatv/imagecheck:${{ github.sha }} .
@@ -53,7 +36,24 @@ jobs:
         run: |
           docker push ghcr.io/sambatv/imagecheck:${{ github.sha }}
           docker push ghcr.io/sambatv/imagecheck:v${{ steps.get_version.outputs.VERSION }}
-#
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+
+      - name: Build for Linux/Intel
+        run: GOOS=linux GOARCH=amd64 go build -ldflags "-X github.com/imagecheck/app.Version=${{ steps.version.outputs.VERSION }}" -o build/linux/amd64/imagecheck .
+
+      - name: Build for Linux/Arm
+        run: GOOS=linux GOARCH=arm64 go build -ldflags "-X github.com/imagecheck/app.Version=${{ steps.version.outputs.VERSION }}" -o build/linux/arm64/imagecheck .
+
+      - name: Build for macOS/Intel
+        run: GOOS=darwin GOARCH=amd64 go build -ldflags "-X github.com/imagecheck/app.Version=${{ steps.version.outputs.VERSION }}" -o build/darwin/amd64/imagecheck .
+
+      - name: Build for macOS/Apple Silicon
+        run: GOOS=darwin GOARCH=arm64 go build -ldflags "-X github.com/imagecheck/app.Version=${{ steps.version.outputs.VERSION }}" -o build/darwin/arm64/imagecheck .
+
 #      - name: Release
 #        uses: softprops/action-gh-release@v2
 #        if: startsWith(github.ref, 'refs/tags/')

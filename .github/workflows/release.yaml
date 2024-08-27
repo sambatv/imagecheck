@@ -2,7 +2,6 @@ name: Go
 
 on:
   push:
-    tags: ['v*']
     branches: ['main']
 
 jobs:
@@ -43,16 +42,16 @@ jobs:
           go-version: '1.23.x'
 
       - name: Build for Linux/Intel
-        run: GOOS=linux GOARCH=amd64 go build -ldflags "-X github.com/imagecheck/app.Version=${{ steps.version.outputs.VERSION }}" -o build/linux/amd64/imagecheck .
+        run: GOOS=linux GOARCH=amd64 go build -ldflags "-X github.com/imagecheck/app.Version=${{ steps.get_version.outputs.VERSION }}" -o build/linux/amd64/imagecheck .
 
       - name: Build for Linux/Arm
-        run: GOOS=linux GOARCH=arm64 go build -ldflags "-X github.com/imagecheck/app.Version=${{ steps.version.outputs.VERSION }}" -o build/linux/arm64/imagecheck .
+        run: GOOS=linux GOARCH=arm64 go build -ldflags "-X github.com/imagecheck/app.Version=${{ steps.get_version.outputs.VERSION }}" -o build/linux/arm64/imagecheck .
 
       - name: Build for macOS/Intel
-        run: GOOS=darwin GOARCH=amd64 go build -ldflags "-X github.com/imagecheck/app.Version=${{ steps.version.outputs.VERSION }}" -o build/darwin/amd64/imagecheck .
+        run: GOOS=darwin GOARCH=amd64 go build -ldflags "-X github.com/imagecheck/app.Version=${{ steps.get_version.outputs.VERSION }}" -o build/darwin/amd64/imagecheck .
 
       - name: Build for macOS/Apple Silicon
-        run: GOOS=darwin GOARCH=arm64 go build -ldflags "-X github.com/imagecheck/app.Version=${{ steps.version.outputs.VERSION }}" -o build/darwin/arm64/imagecheck .
+        run: GOOS=darwin GOARCH=arm64 go build -ldflags "-X github.com/imagecheck/app.Version=${{ steps.get_version.outputs.VERSION }}" -o build/darwin/arm64/imagecheck .
 
 #      - name: Release
 #        uses: softprops/action-gh-release@v2

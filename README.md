@@ -77,36 +77,43 @@ On both Linux and macOS you can also install the scanners from their GitHub
 releases using their `install.sh` scripts:
 
 ```shell
-curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
-curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b ~/bin
+curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ~/bin
+curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b ~/bin
 ```
 
 After installation, the `grype`, `trivy`, and `trufflehog` binaries will be
-available in your `/usr/local/bin` directory.
+available in your `$HOME/bin` directory.
 
 ### Use install.sh script
 
 You can install the application from its GitHub releases using the `install.sh` script:
 
 ```shell
-curl -sSfL https://raw.githubusercontent.com/sambatv/imagecheck/main/install.sh | sh -s -- -b /usr/local/bin
+curl -sSfL https://raw.githubusercontent.com/sambatv/imagecheck/main/install.sh | sh -s -- -b ~/bin
 ```
 
 After installation, the `imagecheck` binary will be available in your
-`/usr/local/bin` directory.
+`$HOME/bin` directory.
+
+```shell
+~/bin/imagecheck --help
+```
 
 ### Use go install
 
 The `imagecheck` binary can be installed using the `go` toolchain:
 
 ```shell
-sudo GOBIN=/usr/local/bin go install github.com/sambatv/imagecheck@latest
-/usr/local/bin/imagecheck --help
+GOBIN=~/bin go install github.com/sambatv/imagecheck@latest
 ```
 
 After installation, the `imagecheck` binary will be available in your
-`/usr/local/bin` directory.
+`$HOME/bin` directory.
+
+```shell
+~/bin/imagecheck --help
+```
 
 ### Use local build
 
@@ -116,11 +123,14 @@ You can also build the application locally:
 git clone https://github.com/sambatv/imagecheck.git
 cd imagecheck
 make build
-./imagecheck --help
 ```
 
 After building, the `imagecheck` binary will be available in the repository
 root directory.
+
+```shell
+./imagecheck --help
+```
 
 ### Use docker image from ghci.io registry
 
@@ -128,7 +138,12 @@ The `imagecheck` docker image can be pulled from the `ghci.io` registry:
 
 ```shell
 docker pull ghcr.io/sambatv/imagecheck:latest
-docker run -it --rm ghcr.io/sambatv/imagecheck:v0.10.0 --help 
+```
+
+After pulling, the `imagecheck` binary can be run from the docker image.
+
+```shell
+docker run -it --rm ghcr.io/sambatv/imagecheck:latest --help 
 ```
 
 The `imagecheck` binary is the entrypoint for the container image.

@@ -88,6 +88,13 @@ jobs:
         run: |
           git archive --format=tar.gz --prefix=imagecheck-${{ steps.get_version.outputs.VERSION }}/ -o build/imagecheck-${{ steps.get_version.outputs.VERSION }}.tar.gz ${{ github.sha }}
 
+      - name: Build checksums.txt
+        run: |
+          cd build
+          for tarball in *.tar.gz; do
+            echo "$(sha256sum $tarball) $tarball" >> imagecheck-${{ steps.get_version.outputs.VERSION }}_checksums.txt
+          done
+
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
@@ -97,3 +104,4 @@ jobs:
             build/imagecheck_${{ steps.get_version.outputs.VERSION }}_darwin_amd64.tar.gz
             build/imagecheck_${{ steps.get_version.outputs.VERSION }}_darwin_arm64.tar.gz
             build/imagecheck-${{ steps.get_version.outputs.VERSION }}.tar.gz
+            build/imagecheck-${{ steps.get_version.outputs.VERSION }}_checksums.txt

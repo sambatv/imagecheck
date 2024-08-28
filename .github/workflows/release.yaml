@@ -84,10 +84,6 @@ jobs:
           cp LICENSE README.md build/darwin/arm64/
           tar -czf build/imagecheck_${{ steps.get_version.outputs.VERSION }}_darwin_arm64.tar.gz -C build/darwin/arm64 .
 
-      - name: Build source tarball
-        run: |
-          git archive --format=tar.gz --prefix=imagecheck-${{ steps.get_version.outputs.VERSION }}/ -o build/imagecheck-${{ steps.get_version.outputs.VERSION }}.tar.gz ${{ github.sha }}
-
       - name: Build checksums.txt
         run: |
           cd build
@@ -103,5 +99,4 @@ jobs:
             build/imagecheck_${{ steps.get_version.outputs.VERSION }}_linux_arm64.tar.gz
             build/imagecheck_${{ steps.get_version.outputs.VERSION }}_darwin_amd64.tar.gz
             build/imagecheck_${{ steps.get_version.outputs.VERSION }}_darwin_arm64.tar.gz
-            build/imagecheck-${{ steps.get_version.outputs.VERSION }}.tar.gz
-            build/imagecheck-${{ steps.get_version.outputs.VERSION }}_checksums.txt
+            build/imagecheck_${{ steps.get_version.outputs.VERSION }}_checksums.txt

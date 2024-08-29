@@ -53,7 +53,7 @@ func RunScans() Scans {
 const Name = "imagecheck"
 
 // Usage is the usage of the application.
-const Usage = "Run scans of application for defects and vulnerabilities"
+const Usage = "Run scans for defects and vulnerabilities and generate report results"
 
 // Description is the description of the application.
 const Description = `This application checks a container image and all associated source code and
@@ -61,24 +61,32 @@ configuration artifacts for defects and vulnerabilities. It is intended to be
 used in a CI/CD pipeline to ensure that images are safe to deploy, but is also
 useful for scanning changes by developers during local development workflows.
 
-When run in the repository root directory it performs the following scans:
+The 'scan' command runs a series of scans on the repository and optionally on
+a container image. When run in a repository root directory with no arguments
+it performs the following scans:
  
 - a grype filesystem scan of the repository
 - a trivy config scan of the repository, notably including the Dockerfile
 - a trivy filesystem scan of the repository
 - a trufflehog filesystem scan of the repository
 
-If the --image option is provided it performs the following additional scans
-on the specified container image:
+If an optional image argument is provided to the 'scan' command it performs the
+following additional scans on the container image:
 
 - a grype image scan
 - a trufflehog image scan
+
+Only a single image argument is allowed to the 'scan' command.
 
 The --severity option specifies the severity level at which the application
 should fail the scan.  The default severity level is "medium", which is an
 ISO requirement for us. 
 
 Valid --severity values include "critical", "high", "medium", and "low".
+
+When the --cache option is set, scan results are cached to the local filesystem
+under the --cache-dir option, as is also the case when the --s3-bucket option
+is set, as would be the case in a build pipeline.
 
 When run in a build pipeline, the --s3-bucket option can be set to an
 AWS S3 bucket name to write results to. The --s3-key-prefix option can
@@ -159,6 +167,7 @@ type BuildInfo struct {
 
 // Configuration represents the configuration for the application.
 type Configuration struct {
+	Cache       bool   `json:"cache"`
 	CacheDir    string `json:"cacheDir"`
 	DryRun      bool   `json:"dryRun"`
 	Force       bool   `json:"force"`

@@ -27,24 +27,29 @@ bucket, under the `--s3-key-prefix` option if any, with the following key
 hierarchy.
 
 ```text
-pipelines/
+$S3_KEY_PREFIX/
   $REPO_NAME/
     $BUILD_ID/
       report.json
       sbom.json
       scans/
-        grype.files.json
-        grype.image.json
-        trivy.config.json
-        trivy.files.json
-        trufflehog.files.json
-        trufflehog.image.json
+        grype/
+          files.json
+          $IMAGE.json
+        trivy/
+          config.json
+          files.json
+        trufflehog/
+          files.json
+          $IMAGE.json
 ```
 
 Where:
 
 * `$REPO_NAME` is the git repository name (e.g. `github.com/sambatv/imagecheck`)
 * `$BUILD_ID` is the unique git build pipeline id
+* `$IMAGE` is the name of the built image, there may be multiple images built
+  from the same repository pipeline and
 
 It is also intended to be used as a standalone tool for local development and
 testing before changes are committed to the repository and pushed to their
@@ -168,11 +173,12 @@ following options, after an image has been built and before it is pushed to
 its image registry:
 
 ```shell
-imagecheck scan --image $IMAGE \
+imagecheck \
   --s3-bucket $S3_BUCKET \
   --s3-key-prefix $S3_KEY_PREFIX \
   --git-repo $REPO_NAME \
-  --build $BUILD_ID
+  --build $BUILD_ID \
+  scan $IMAGE 
 ```
 
 Where:
@@ -181,6 +187,7 @@ Where:
 * `$S3_PREFIX` is the prefix of the S3 bucket key hierarchy to save scan results under, if any
 * `$REPO_NAME` is the unique name of the git repository, e.g. `github.com/sambatv/imagecheck`
 * `$BUILD_ID` is the unique identifier of the build pipeline of the git repository
+* `$IMAGE` is the name of the image to scan
 
 For further details on `imagecheck` usage, add the `-h` or `--help` option.
 

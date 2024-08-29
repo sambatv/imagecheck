@@ -17,6 +17,13 @@ import (
 // CLI application flags
 // ----------------------------------------------------------------------------
 
+var cacheFlag = cli.BoolFlag{
+	Name:        "cache",
+	Usage:       "Cache scan report results locally",
+	Destination: &app.Config.Cache,
+	EnvVars:     []string{fmt.Sprintf("%s_CACHE", strings.ToUpper(app.Name))},
+}
+
 var cacheDirFlag = cli.StringFlag{
 	Name:        "cache-dir",
 	Aliases:     []string{"d"},
@@ -36,7 +43,7 @@ var dryRunFlag = cli.BoolFlag{
 var forceFlag = cli.BoolFlag{
 	Name:        "force",
 	Aliases:     []string{"f"},
-	Usage:       "Force scan caching/publishing if already exists",
+	Usage:       "Force scan results caching and S3 uploading if artifacts already exists",
 	Destination: &app.Config.Force,
 	EnvVars:     []string{fmt.Sprintf("%s_FORCE", strings.ToUpper(app.Name))},
 }
@@ -58,14 +65,6 @@ var severityFlag = cli.StringFlag{
 	EnvVars:     []string{fmt.Sprintf("%s_SEVERITY", strings.ToUpper(app.Name))},
 }
 
-var imageFlag = cli.StringFlag{
-	Name:        "image",
-	Aliases:     []string{"i"},
-	Usage:       "The name of the container image to scan",
-	Destination: &app.Config.Image,
-	EnvVars:     []string{fmt.Sprintf("%s_IMAGE", strings.ToUpper(app.Name))},
-}
-
 var s3BucketFlag = cli.StringFlag{
 	Name:        "s3-bucket",
 	Usage:       "The S3 bucket to upload scan results to",
@@ -77,6 +76,7 @@ var s3KeyPrefixFlag = cli.StringFlag{
 	Name:        "s3-key-prefix",
 	Usage:       "The S3 key prefix to upload scan results to",
 	Destination: &app.Config.S3KeyPrefix,
+	Value:       app.Name,
 	EnvVars:     []string{fmt.Sprintf("%s_S3KEYPREFIX", strings.ToUpper(app.Name))},
 }
 
@@ -84,7 +84,7 @@ var gitRepoFlag = cli.StringFlag{
 	Name:        "git-repo",
 	Usage:       "The Git repository id containing the application being scanned",
 	Destination: &app.Config.GitRepo,
-	EnvVars:     []string{fmt.Sprintf("%s_GITREPO", strings.ToUpper(app.CurrentDir))},
+	EnvVars:     []string{fmt.Sprintf("%s_GITREPO", strings.ToUpper(app.Name))},
 }
 
 var buildIdFlag = cli.StringFlag{
@@ -106,12 +106,12 @@ func New() *cli.App {
 		Description:          app.Description,
 		EnableBashCompletion: true,
 		Flags: []cli.Flag{
+			&cacheFlag,
 			&cacheDirFlag,
 			&dryRunFlag,
 			&forceFlag,
 			&verboseFlag,
 			&severityFlag,
-			&imageFlag,
 			&s3BucketFlag,
 			&s3KeyPrefixFlag,
 			&gitRepoFlag,
@@ -121,7 +121,16 @@ func New() *cli.App {
 			{
 				Name:  "scan",
 				Usage: "Runs scanners",
-				Action: func(_ *cli.Context) error {
+				Action: func(c *cli.Context) error {
+					// Ensure a single argument is provided, at most.
+					if c.NArg() > 1 {
+						return fmt.Errorf("too many image arguments")
+					}
+					// Set the image in the configuration to that single argument, if provided.
+					if c.NArg() == 1 {
+						app.Config.Image = c.Args().First()
+					}
+
 					// Ensure that if we're running in pipeline mode, the repo is not in a dirty state.
 					if app.Config.PipelineMode() && app.Build.Dirty {
 						return fmt.Errorf("dirty git repository not allowed in pipeline mode")
@@ -164,8 +173,8 @@ func New() *cli.App {
 					tbl.Print()
 					fmt.Println()
 
-					// If pipeline mode is not configured, we're done.
-					if !app.Config.PipelineMode() {
+					// If cache or pipeline mode is not configured, we're done.
+					if !(app.Config.Cache || app.Config.PipelineMode()) {
 						// But first, check to see if any defects or vulnerabilities meet
 						// or exceed the severity specified in the fail flag.
 						if scans.Failure() {
@@ -175,15 +184,19 @@ func New() *cli.App {
 						return nil
 					}
 
-					// Otherwise, create a new scans report, cache it locally, and upload cached report to S3.
+					// Otherwise, create a new scans report and cache it locally.
 					report := scans.Report(startTime)
 					fmt.Println("\nCaching scans report...")
 					if err := report.Cache(); err != nil {
 						return err
 					}
-					fmt.Println("\nUploading scans report...")
-					if err := report.Upload(); err != nil {
-						return err
+
+					// Upload the scans report to S3 if in pipeline mode.
+					if app.Config.PipelineMode() {
+						fmt.Println("\nUploading scans report...")
+						if err := report.Upload(); err != nil {
+							return err
+						}
 					}
 
 					// We're done, but first check to see if any defects or vulnerabilities

@@ -1,5 +1,5 @@
-FROM golang:1.23.0-bookworm AS builder
-RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends curl git make
+FROM golang:1.23.0-alpine3.20 AS builder
+RUN apk update && apk upgrade && apk add --no-cache bash curl git make shadow
 RUN curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
 RUN curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
 RUN curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
@@ -9,10 +9,9 @@ RUN go mod download
 COPY . .
 RUN make build
 
-FROM debian:bookworm-slim
+FROM alpine:3.20.2
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
 COPY --from=builder /app/imagecheck /usr/local/bin/
-RUN useradd -u 1001 -ms /bin/bash app
-USER app
-WORKDIR /home/app
+USER 1001:1001
+WORKDIR /
 ENTRYPOINT ["/usr/local/bin/imagecheck"]

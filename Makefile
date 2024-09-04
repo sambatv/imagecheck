@@ -30,6 +30,7 @@ REGISTRY_REPOSITORY = $(REGISTRY_HOSTNAME)/sambatv/$(APP_NAME)
 # Set image identity configuration.
 # By default, only build and push images tagged with the git commit short hash.
 IMAGE = $(REGISTRY_REPOSITORY):$(GIT_TAG)
+IMAGE_LATEST = $(REGISTRY_REPOSITORY):latest
 # If the RELEASE environment variable is set to anything, additionally
 # push images tagged with the app version.
 ifneq ($(RELEASE),)
@@ -119,6 +120,10 @@ ifneq ($(RELEASE),)
 	@echo
 	@echo 'tagging versioned image $(IMAGE_VERSIONED)'
 	docker tag $(IMAGE) $(IMAGE_VERSIONED)
+else
+	@echo
+	@echo 'tagging latest image $(IMAGE)'
+	docker tag $(IMAGE) $(IMAGE_LATEST)
 endif
 
 .PHONY: image-scan

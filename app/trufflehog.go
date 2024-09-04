@@ -27,7 +27,7 @@ func (s TrufflehogScanner) Version() string {
 }
 
 // Scan scans a target for a type of defect or vulnerability with trufflehog.
-func (s TrufflehogScanner) Scan(scanType, scanTarget, severity string, pipelineMode bool) Scan {
+func (s TrufflehogScanner) Scan(scanType, scanTarget, severity string, dryRun, pipelineMode bool) Scan {
 	// Set output format to JSON in pipeline mode.
 	var outputOpt string
 	if pipelineMode {
@@ -37,17 +37,17 @@ func (s TrufflehogScanner) Scan(scanType, scanTarget, severity string, pipelineM
 	// Scan the appropriate scan command line.
 	switch scanType {
 	case "files":
-		return s.run(fmt.Sprintf("trufflehog --fail %s filesystem %s", outputOpt, scanTarget), scanType, scanTarget, pipelineMode)
+		return s.run(fmt.Sprintf("trufflehog --fail %s filesystem %s", outputOpt, scanTarget), scanType, scanTarget, dryRun, pipelineMode)
 	case "image":
-		return s.run(fmt.Sprintf("trufflehog --fail %s docker --image=%s", outputOpt, scanTarget), scanType, scanTarget, pipelineMode)
+		return s.run(fmt.Sprintf("trufflehog --fail %s docker --image=%s", outputOpt, scanTarget), scanType, scanTarget, dryRun, pipelineMode)
 	default:
 		return Scan{}
 	}
 }
 
-func (s TrufflehogScanner) run(cmdline, scanType, scanTarget string, pipelineMode bool) Scan {
+func (s TrufflehogScanner) run(cmdline, scanType, scanTarget string, dryRun, pipelineMode bool) Scan {
 	beginTime := time.Now()
-	exitCode, stdout, err := execScanner(cmdline, pipelineMode)
+	exitCode, stdout, err := execScanner(cmdline, dryRun, pipelineMode)
 	durationSecs := time.Since(beginTime).Seconds()
 	scan := Scan{
 		ScanTool:     s.Name(),
@@ -61,6 +61,9 @@ func (s TrufflehogScanner) run(cmdline, scanType, scanTarget string, pipelineMod
 	}
 	if err != nil {
 		scan.Error = err.Error()
+	}
+	if dryRun {
+		return scan
 	}
 
 	// TODO: Parse the output to get the number of vulnerabilities.

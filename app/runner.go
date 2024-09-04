@@ -14,6 +14,7 @@ type ScanRunnerConfig struct {
 	IgnoreFixStates string
 	PipelineMode    bool
 	Verbose         bool
+	DryRun          bool
 }
 
 // ScanRunner runs scans.
@@ -29,7 +30,7 @@ func NewScanRunner(config ScanRunnerConfig) *ScanRunner {
 // Scan runs the scans and returns their results.
 func (r *ScanRunner) Scan(image string) []Scan {
 	runScan := func(scanner, scanType, scanTarget string) Scan {
-		return ScanTools[scanner].Scan(scanType, scanTarget, r.Config.Severity, r.Config.PipelineMode)
+		return ScanTools[scanner].Scan(scanType, scanTarget, r.Config.Severity, r.Config.DryRun, r.Config.PipelineMode)
 	}
 
 	scans := make([]Scan, 0)
@@ -48,7 +49,7 @@ func (r *ScanRunner) Scan(image string) []Scan {
 // ScanTool defines behaviors for a scanner application used to scan a target for a type of defect or vulnerability.
 type ScanTool interface {
 	// Scan scans a target for a type of defect or vulnerability.
-	Scan(scanType, scanTarget, severity string, pipelineMode bool) Scan
+	Scan(scanType, scanTarget, severity string, dryRun, pipelineMode bool) Scan
 
 	// Name returns the name of the scanner application.
 	Name() string
@@ -65,13 +66,16 @@ var ScanTools = map[string]ScanTool{
 }
 
 // execScanner executes a scan tool command line and returns its exit code, stdout and stderr.
-func execScanner(cmdline string, pipelineMode bool) (int, []byte, error) {
+func execScanner(cmdline string, dryRun, pipelineMode bool) (int, []byte, error) {
 	var (
 		exitCode int
 		stdout   []byte
 		err      error
 	)
 	fmt.Printf("\nrunning: %s\n", cmdline)
+	if dryRun {
+		return 0, []byte{}, nil
+	}
 
 	// Build command.
 	parts := strings.Fields(cmdline)

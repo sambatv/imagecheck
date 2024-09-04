@@ -30,7 +30,7 @@ func (s GrypeScanner) Version() string {
 }
 
 // Scan scans a target for a type of defect or vulnerability with grype.
-func (s GrypeScanner) Scan(scanType, scanTarget, severity string, pipelineMode bool) Scan {
+func (s GrypeScanner) Scan(scanType, scanTarget, severity string, dryRun, pipelineMode bool) Scan {
 	// Set output format to JSON in pipeline mode.
 	var outputOpt string
 	if pipelineMode {
@@ -40,17 +40,17 @@ func (s GrypeScanner) Scan(scanType, scanTarget, severity string, pipelineMode b
 	// Scan the appropriate scan command line.
 	switch scanType {
 	case "files":
-		return s.run(fmt.Sprintf("grype %s --fail-on=%s dir:%s", outputOpt, severity, scanTarget), scanType, scanTarget, pipelineMode)
+		return s.run(fmt.Sprintf("grype %s --fail-on=%s dir:%s", outputOpt, severity, scanTarget), scanType, scanTarget, dryRun, pipelineMode)
 	case "image":
-		return s.run(fmt.Sprintf("grype %s --fail-on=%s %s", outputOpt, severity, scanTarget), scanType, scanTarget, pipelineMode)
+		return s.run(fmt.Sprintf("grype %s --fail-on=%s %s", outputOpt, severity, scanTarget), scanType, scanTarget, dryRun, pipelineMode)
 	default:
 		return Scan{}
 	}
 }
 
-func (s GrypeScanner) run(cmdline, scanType, scanTarget string, pipelineMode bool) Scan {
+func (s GrypeScanner) run(cmdline, scanType, scanTarget string, dryRun, pipelineMode bool) Scan {
 	beginTime := time.Now()
-	exitCode, stdout, err := execScanner(cmdline, pipelineMode)
+	exitCode, stdout, err := execScanner(cmdline, dryRun, pipelineMode)
 	durationSecs := time.Since(beginTime).Seconds()
 	scan := Scan{
 		ScanTool:     s.Name(),
@@ -64,6 +64,9 @@ func (s GrypeScanner) run(cmdline, scanType, scanTarget string, pipelineMode boo
 	}
 	if err != nil {
 		scan.Error = err.Error()
+	}
+	if dryRun {
+		return scan
 	}
 
 	// Parse the JSON output to get the number of vulnerabilities.

@@ -23,7 +23,7 @@ import (
 // CLI application docs
 // ----------------------------------------------------------------------------
 
-const scanCmdDocs = `This command checks a container image and all associated source code and
+const docs = `This application checks a container image and all associated source code and
 configuration artifacts for defects and vulnerabilities. It is intended to be
 used in a CI/CD pipeline to ensure that images are safe to deploy, but is also
 useful for scanning changes by developers during local development workflows.
@@ -51,8 +51,12 @@ ISO requirement for us.
 
 Valid --severity values include "critical", "high", "medium", and "low".
 
-When run in pipeline mode, the scans output and summaries are written to an
-AWS S3 bucket. To enable pipeline mode, provide the following options:
+If the --dry-run option is provided, the scanner commands will not actually be
+run, and will simply be displayed.
+
+When run in pipeline mode with the --pipeline option, the scans output and
+summaries are cached locally and written to an AWS S3 bucket. When running in
+pipeline mode, provide the following additional options:
 
 * --s3-bucket      The S3 bucket to upload scan results to
 * --s3-key-prefix  The S3 key prefix to upload scan results to (optional, defaults to the application name)
@@ -91,6 +95,7 @@ var validIgnoreFixStates = []string{"fixed", "not-fixed", "wont-fix", "unknown"}
 // ----------------------------------------------------------------------------
 
 var config struct {
+	DryRun          bool   `json:"dryRun"`
 	Force           bool   `json:"force"`
 	Verbose         bool   `json:"verbose"`
 	Severity        string `json:"severity"`
@@ -103,6 +108,13 @@ var config struct {
 	S3KeyPrefix     string `json:"s3KeyPrefix"`
 }
 
+var dryRunFlag = cli.BoolFlag{
+	Name:        "dry-run",
+	Usage:       "Perform a dry run without actually running the scans",
+	Destination: &config.DryRun,
+	EnvVars:     []string{fmt.Sprintf("%s_DRYRUN", strings.ToUpper(app.Name))},
+	Category:    "Scanning",
+}
 var forceFlag = cli.BoolFlag{
 	Name:        "force",
 	Aliases:     []string{"f"},
@@ -201,154 +213,128 @@ func New() *cli.App {
 	return &cli.App{
 		Name:                 app.Name,
 		Usage:                "Check image for defects and vulnerabilities",
+		Description:          docs,
 		EnableBashCompletion: true,
-		Commands: []*cli.Command{
-			{
-				Name:        "scan",
-				Usage:       "Runs scanners and reports on defects and vulnerabilities",
-				Description: scanCmdDocs,
-				Flags: []cli.Flag{
-					&forceFlag,
-					&verboseFlag,
-					&severityFlag,
-					&ignoreFixStatesFlag,
-					&pipelineFlag,
-					&gitRepoFlag,
-					&buildIdFlag,
-					&cacheDirFlag,
-					&s3BucketFlag,
-					&s3KeyPrefixFlag,
-				},
-				Action: func(c *cli.Context) error {
-					// Ensure a single argument is provided, at most.
-					if c.NArg() > 1 {
-						return fmt.Errorf("too many image arguments")
-					}
-					// Set the image to that single argument, if provided.
-					var image string
-					if c.NArg() == 1 {
-						image = c.Args().First()
-					}
+		Flags: []cli.Flag{
+			&dryRunFlag,
+			&forceFlag,
+			&verboseFlag,
+			&severityFlag,
+			&ignoreFixStatesFlag,
+			&pipelineFlag,
+			&gitRepoFlag,
+			&buildIdFlag,
+			&cacheDirFlag,
+			&s3BucketFlag,
+			&s3KeyPrefixFlag,
+		},
+		Action: func(c *cli.Context) error {
+			// Ensure a single argument is provided, at most, and set the image to that argument.
+			if c.NArg() > 1 {
+				return fmt.Errorf("too many image arguments")
+			}
+			var image string
+			if c.NArg() == 1 {
+				image = c.Args().First()
+			}
 
-					// Ensure that ignored fix states are valid.
-					for _, ignoreFixState := range strings.Split(config.IgnoreFixStates, ",") {
-						if ignoreFixState != "" && !isValidIgnoreFixState(ignoreFixState) {
-							return fmt.Errorf("invalid ignore state: %s. Chose one of %s", ignoreFixState, strings.Join(validIgnoreFixStates, ", "))
-						}
-					}
+			// Ensure that ignored fix states are valid.
+			for _, ignoreFixState := range strings.Split(config.IgnoreFixStates, ",") {
+				if ignoreFixState != "" && !isValidIgnoreFixState(ignoreFixState) {
+					return fmt.Errorf("invalid ignore state: %s. Chose one of %s", ignoreFixState, strings.Join(validIgnoreFixStates, ", "))
+				}
+			}
 
-					// Ensure that if --s3-bucket option is provided, so are --git-repo and --build-id options.
-					if config.S3Bucket != "" && (config.GitRepo == "" || config.BuildId == "") {
-						return fmt.Errorf("--git-repo and --build-id required in pipeline mode")
-					}
+			// Ensure that if --s3-bucket option is provided, so are --git-repo and --build-id options.
+			if config.S3Bucket != "" && (config.GitRepo == "" || config.BuildId == "") {
+				return fmt.Errorf("--git-repo and --build-id required in pipeline mode")
+			}
 
-					// Ensure that if we're running in pipeline mode, the repo is not in a dirty state (unless forced).
-					if config.Pipeline && buildInfo.Dirty && !config.Force {
-						return fmt.Errorf("dirty git repository not allowed in pipeline mode")
-					}
+			// Ensure that if we're running in pipeline mode, the repo is not in a dirty state (unless forced).
+			if config.Pipeline && buildInfo.Dirty && !config.Force {
+				return fmt.Errorf("dirty git repository not allowed in pipeline mode")
+			}
 
-					// Normalize the severity flag value to lowercase and ensure it's valid.
-					config.Severity = strings.ToLower(config.Severity)
-					if !isValidSeverity(config.Severity) {
-						return fmt.Errorf("invalid severity: %s. Chose one of %s", config.Severity, strings.Join(validSeverities, ", "))
-					}
+			// Normalize the severity flag value to lowercase and ensure it's valid.
+			config.Severity = strings.ToLower(config.Severity)
+			if !isValidSeverity(config.Severity) {
+				return fmt.Errorf("invalid severity: %s. Chose one of %s", config.Severity, strings.Join(validSeverities, ", "))
+			}
 
-					// Print application identity if we're running in verbose or pipeline mode.
-					if config.Verbose || config.Pipeline {
-						var pipelineMode string
-						if config.Pipeline {
-							pipelineMode = "(pipeline mode)"
-						}
-						fmt.Printf("%s %s %s\n\n", app.Name, app.Version, pipelineMode)
-					}
+			// Ensure required scan tools are available in PATH.
+			for name := range app.ScanTools {
+				if path, _ := exec.LookPath(name); path == "" {
+					return fmt.Errorf("missing scanner: %s", name)
+				}
+			}
 
-					// Ensure required scan tools are available in PATH.
-					for name := range app.ScanTools {
-						if path, _ := exec.LookPath(name); path == "" {
-							return fmt.Errorf("missing scanner: %s", name)
-						}
-					}
+			// Print application identity and additional details if we're running in verbose or pipeline mode.
+			if config.Verbose || config.Pipeline {
+				var pipelineMode string
+				if config.Pipeline {
+					pipelineMode = "(pipeline mode)"
+				}
+				fmt.Printf("%s %s %s\n\n", app.Name, app.Version, pipelineMode)
 
-					// Print the scan tools details if we're running in verbose or pipeline mode.
-					if config.Verbose || config.Pipeline {
-						tbl := getScanToolsTable()
-						tbl.Print()
-						fmt.Println()
-					}
+				tbl := getBuildInfoTable()
+				tbl.Print()
+				fmt.Println()
 
-					// Get the start time timestamp, create a scan runner, and run the scans.
-					fmt.Println("Running scans ...")
-					runner := app.NewScanRunner(app.ScanRunnerConfig{
-						Severity:        config.Severity,
-						IgnoreFixStates: config.IgnoreFixStates,
-						PipelineMode:    config.Pipeline,
-						Verbose:         config.Verbose,
-					})
-					beginTime := time.Now()
-					scans := runner.Scan(image)
-					//endTime := time.Now()
+				tbl = getScanToolsTable()
+				tbl.Print()
+				fmt.Println()
 
-					// If we're not running in pipeline mode, we're done.
-					if !config.Pipeline {
-						return nil
-					}
+				tbl = getConfigTable()
+				tbl.Print()
+				fmt.Println()
+			}
 
-					// Otherwise, continue pipeline mode processing by printing a table of scan results.
-					tbl := getScansTable(scans)
-					fmt.Println()
-					tbl.Print()
-					fmt.Println()
+			// Get the start time timestamp, create a scan runner, and run the scans.
+			fmt.Println("Running scans ...")
+			runner := app.NewScanRunner(app.ScanRunnerConfig{
+				Severity:        config.Severity,
+				IgnoreFixStates: config.IgnoreFixStates,
+				PipelineMode:    config.Pipeline,
+				Verbose:         config.Verbose,
+				DryRun:          config.DryRun,
+			})
+			beginTime := time.Now()
+			scans := runner.Scan(image)
+			//endTime := time.Now()
 
-					// Create a new scan reporter and report the scans.
-					reporter := app.NewScanReporter(app.ScanReporterConfig{
-						CacheDir:    config.CacheDir,
-						Force:       config.Force,
-						Verbose:     config.Verbose,
-						GitRepo:     config.GitRepo,
-						BuildId:     config.BuildId,
-						S3Bucket:    config.S3Bucket,
-						S3KeyPrefix: config.S3KeyPrefix,
-					})
-					fmt.Println("\nReporting scans...")
-					if err := reporter.Report(scans, beginTime); err != nil {
-						return err
-					}
+			// We're done if we're not running in pipeline mode or if running in dry run mode.
+			if !config.Pipeline || config.DryRun {
+				return nil
+			}
 
-					// We're done, but first check to see if any defects or vulnerabilities
-					// meet or exceed the severity specified in the fail flag.
-					if checkFailed(scans, config.Severity) {
-						return fmt.Errorf("%s severity %s threshold met or exceeded", app.Name, config.Severity)
-					}
-					fmt.Printf("\n%s succeeded.\n", app.Name)
-					return nil
-				},
-			},
-			{
-				Name:  "buildinfo",
-				Usage: "Shows build information",
-				Action: func(_ *cli.Context) error {
-					tbl := getBuildInfoTable()
-					tbl.Print()
-					return nil
-				},
-			},
-			{
-				Name:  "scantools",
-				Usage: "Shows scan tools details",
-				Action: func(_ *cli.Context) error {
-					tbl := getScanToolsTable()
-					tbl.Print()
-					return nil
-				},
-			},
-			{
-				Name:  "version",
-				Usage: "Shows version",
-				Action: func(_ *cli.Context) error {
-					fmt.Println(app.Version)
-					return nil
-				},
-			},
+			// Otherwise, continue pipeline mode processing by printing a table of scan results.
+			tbl := getScansTable(scans)
+			fmt.Println()
+			tbl.Print()
+			fmt.Println()
+
+			// Create a new scan reporter and report the scans.
+			reporter := app.NewScanReporter(app.ScanReporterConfig{
+				CacheDir:    config.CacheDir,
+				Force:       config.Force,
+				Verbose:     config.Verbose,
+				GitRepo:     config.GitRepo,
+				BuildId:     config.BuildId,
+				S3Bucket:    config.S3Bucket,
+				S3KeyPrefix: config.S3KeyPrefix,
+			})
+			fmt.Println("\nReporting scans...")
+			if err := reporter.Report(scans, beginTime); err != nil {
+				return err
+			}
+
+			// We're done, but first check to see if any defects or vulnerabilities
+			// meet or exceed the severity specified in the fail flag.
+			if checkFailed(scans, config.Severity) {
+				return fmt.Errorf("%s severity %s threshold met or exceeded", app.Name, config.Severity)
+			}
+			fmt.Printf("\n%s succeeded.\n", app.Name)
+			return nil
 		},
 	}
 }
@@ -430,6 +416,22 @@ func getBuildInfoTable() table.Table {
 	tbl.AddRow("Commit", buildInfo.Commit)
 	tbl.AddRow("Timestamp", buildInfo.Timestamp)
 	tbl.AddRow("Dirty", buildInfo.Dirty)
+	return tbl
+}
+
+func getConfigTable() table.Table {
+	tbl := table.New("Name", "Value")
+	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
+	tbl.AddRow("Force", config.Force)
+	tbl.AddRow("Verbose", config.Verbose)
+	tbl.AddRow("Severity", config.Severity)
+	tbl.AddRow("Ignore Fix States", config.IgnoreFixStates)
+	tbl.AddRow("Pipeline", config.Pipeline)
+	tbl.AddRow("Git Repo", config.GitRepo)
+	tbl.AddRow("Build Id", config.BuildId)
+	tbl.AddRow("Cache Dir", config.CacheDir)
+	tbl.AddRow("S3 Bucket", config.S3Bucket)
+	tbl.AddRow("S3 Key Prefix", config.S3KeyPrefix)
 	return tbl
 }
 

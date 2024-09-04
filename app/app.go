@@ -7,9 +7,6 @@ import (
 	"path/filepath"
 )
 
-// Name is the name of the application.
-const Name = "imagecheck"
-
 // "constants" with non-trivial initialization.
 var (
 	// Version is the version of the application set during build with -ldflags.

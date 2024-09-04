@@ -67,14 +67,18 @@ var ScanTools = map[string]ScanTool{
 
 // execScanner executes a scan tool command line and returns its exit code, stdout and stderr.
 func execScanner(cmdline string, dryRun, pipelineMode bool) (int, []byte, error) {
+	if dryRun {
+		fmt.Println(cmdline)
+		return 0, []byte{}, nil
+	}
+
 	var (
 		exitCode int
 		stdout   []byte
 		err      error
 	)
-	fmt.Printf("\nrunning: %s\n", cmdline)
-	if dryRun {
-		return 0, []byte{}, nil
+	if pipelineMode {
+		fmt.Printf("\nrunning: %s\n", cmdline)
 	}
 
 	// Build command.

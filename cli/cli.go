@@ -20,10 +20,12 @@ import (
 )
 
 // ----------------------------------------------------------------------------
-// CLI application docs
+// CLI application metadata
 // ----------------------------------------------------------------------------
 
-const docs = `This application checks a container image and all associated source code and
+const appName = "imagecheck"
+const appUsage = "Check image for defects and vulnerabilities"
+const appDescription = `This application checks a container image and all associated source code and
 configuration artifacts for defects and vulnerabilities. It is intended to be
 used in a CI/CD pipeline to ensure that images are safe to deploy, but is also
 useful for scanning changes by developers during local development workflows.
@@ -75,7 +77,7 @@ func init() {
 	if buildInfo, err = getBuildInfo(); err != nil {
 		panic(err)
 	}
-	if defaultCacheDir, err = homeDirPath(".cache", app.Name); err != nil {
+	if defaultCacheDir, err = homeDirPath(".cache", appName); err != nil {
 		panic(err)
 	}
 }
@@ -112,7 +114,7 @@ var dryRunFlag = cli.BoolFlag{
 	Name:        "dry-run",
 	Usage:       "Perform a dry run without actually running the scans",
 	Destination: &config.DryRun,
-	EnvVars:     []string{fmt.Sprintf("%s_DRYRUN", strings.ToUpper(app.Name))},
+	EnvVars:     []string{fmt.Sprintf("%s_DRYRUN", strings.ToUpper(appName))},
 	Category:    "Scanning",
 }
 var forceFlag = cli.BoolFlag{
@@ -120,7 +122,7 @@ var forceFlag = cli.BoolFlag{
 	Aliases:     []string{"f"},
 	Usage:       "Force scan results caching and S3 uploading if artifacts already exists",
 	Destination: &config.Force,
-	EnvVars:     []string{fmt.Sprintf("%s_FORCE", strings.ToUpper(app.Name))},
+	EnvVars:     []string{fmt.Sprintf("%s_FORCE", strings.ToUpper(appName))},
 	Category:    "Miscellaneous",
 }
 
@@ -129,7 +131,7 @@ var verboseFlag = cli.BoolFlag{
 	Aliases:     []string{"v"},
 	Usage:       "Display verbose output",
 	Destination: &config.Verbose,
-	EnvVars:     []string{fmt.Sprintf("%s_VERBOSE", strings.ToUpper(app.Name))},
+	EnvVars:     []string{fmt.Sprintf("%s_VERBOSE", strings.ToUpper(appName))},
 	Category:    "Miscellaneous",
 }
 
@@ -139,7 +141,7 @@ var severityFlag = cli.StringFlag{
 	Usage:       "Fail check if any defects or vulnerabilities meets or exceeds the specified severity",
 	Value:       defaultSeverity,
 	Destination: &config.Severity,
-	EnvVars:     []string{fmt.Sprintf("%s_SEVERITY", strings.ToUpper(app.Name))},
+	EnvVars:     []string{fmt.Sprintf("%s_SEVERITY", strings.ToUpper(appName))},
 	Category:    "Scanning",
 }
 
@@ -148,7 +150,7 @@ var ignoreFixStatesFlag = cli.StringFlag{
 	Aliases:     []string{"i"},
 	Destination: &config.IgnoreFixStates,
 	Usage:       "Ignore defects or vulnerabilities with any of the specified fix states",
-	EnvVars:     []string{fmt.Sprintf("%s_IGNOREFIXSTATES", strings.ToUpper(app.Name))},
+	EnvVars:     []string{fmt.Sprintf("%s_IGNOREFIXSTATES", strings.ToUpper(appName))},
 	Category:    "Scanning",
 }
 
@@ -157,7 +159,7 @@ var pipelineFlag = cli.BoolFlag{
 	Aliases:     []string{"p"},
 	Usage:       "Run in pipeline mode",
 	Destination: &config.Pipeline,
-	EnvVars:     []string{fmt.Sprintf("%s_PIPELINE", strings.ToUpper(app.Name))},
+	EnvVars:     []string{fmt.Sprintf("%s_PIPELINE", strings.ToUpper(appName))},
 	Category:    "Reporting",
 }
 
@@ -165,7 +167,7 @@ var gitRepoFlag = cli.StringFlag{
 	Name:        "git-repo",
 	Usage:       "The git repository id containing the application being scanned",
 	Destination: &config.GitRepo,
-	EnvVars:     []string{fmt.Sprintf("%s_GITREPO", strings.ToUpper(app.Name))},
+	EnvVars:     []string{fmt.Sprintf("%s_GITREPO", strings.ToUpper(appName))},
 	Category:    "Reporting",
 }
 
@@ -173,7 +175,7 @@ var buildIdFlag = cli.StringFlag{
 	Name:        "build-id",
 	Usage:       "The build id of the git repository pipeline of the application being scanned",
 	Destination: &config.BuildId,
-	EnvVars:     []string{fmt.Sprintf("%s_BUILDID", strings.ToUpper(app.Name))},
+	EnvVars:     []string{fmt.Sprintf("%s_BUILDID", strings.ToUpper(appName))},
 	Category:    "Reporting",
 }
 
@@ -183,7 +185,7 @@ var cacheDirFlag = cli.StringFlag{
 	Usage:       "The cache directory for S3 uploads in pipeline mode",
 	Destination: &config.CacheDir,
 	Value:       defaultCacheDir,
-	EnvVars:     []string{fmt.Sprintf("%s_CACHEDIR", strings.ToUpper(app.Name))},
+	EnvVars:     []string{fmt.Sprintf("%s_CACHEDIR", strings.ToUpper(appName))},
 	Category:    "Reporting",
 }
 
@@ -191,7 +193,7 @@ var s3BucketFlag = cli.StringFlag{
 	Name:        "s3-bucket",
 	Usage:       "The S3 bucket to upload scan results to",
 	Destination: &config.S3Bucket,
-	EnvVars:     []string{fmt.Sprintf("%s_S3BUCKET", strings.ToUpper(app.Name))},
+	EnvVars:     []string{fmt.Sprintf("%s_S3BUCKET", strings.ToUpper(appName))},
 	Category:    "Reporting",
 }
 
@@ -199,8 +201,8 @@ var s3KeyPrefixFlag = cli.StringFlag{
 	Name:        "s3-key-prefix",
 	Usage:       "The S3 key prefix to upload scan results to",
 	Destination: &config.S3KeyPrefix,
-	Value:       app.Name,
-	EnvVars:     []string{fmt.Sprintf("%s_S3KEYPREFIX", strings.ToUpper(app.Name))},
+	Value:       appName,
+	EnvVars:     []string{fmt.Sprintf("%s_S3KEYPREFIX", strings.ToUpper(appName))},
 	Category:    "Reporting",
 }
 
@@ -211,9 +213,9 @@ var s3KeyPrefixFlag = cli.StringFlag{
 // New creates a new cli application.
 func New() *cli.App {
 	return &cli.App{
-		Name:                 app.Name,
-		Usage:                "Check image for defects and vulnerabilities",
-		Description:          docs,
+		Name:                 appName,
+		Usage:                appUsage,
+		Description:          appDescription,
 		EnableBashCompletion: true,
 		Flags: []cli.Flag{
 			&dryRunFlag,
@@ -268,29 +270,34 @@ func New() *cli.App {
 				}
 			}
 
-			// Print application identity and additional details if we're running in verbose or pipeline mode.
+			// Print application details if necessary.
 			if config.Verbose || config.Pipeline {
 				var pipelineMode string
 				if config.Pipeline {
 					pipelineMode = "(pipeline mode)"
 				}
-				fmt.Printf("%s %s %s\n\n", app.Name, app.Version, pipelineMode)
+				fmt.Printf("%s %s %s\n\n", appName, app.Version, pipelineMode)
 
+				fmt.Println("BUILD")
 				tbl := getBuildInfoTable()
 				tbl.Print()
 				fmt.Println()
 
-				tbl = getScanToolsTable()
+				fmt.Println("CONFIG")
+				tbl = getConfigTable()
 				tbl.Print()
 				fmt.Println()
 
-				tbl = getConfigTable()
+				fmt.Println("SCANNERS")
+				tbl = getScanToolsTable()
 				tbl.Print()
 				fmt.Println()
 			}
 
 			// Get the start time timestamp, create a scan runner, and run the scans.
-			fmt.Println("Running scans ...")
+			if config.Verbose || config.Pipeline {
+				fmt.Println("Running scans ...")
+			}
 			runner := app.NewScanRunner(app.ScanRunnerConfig{
 				Severity:        config.Severity,
 				IgnoreFixStates: config.IgnoreFixStates,
@@ -300,7 +307,6 @@ func New() *cli.App {
 			})
 			beginTime := time.Now()
 			scans := runner.Scan(image)
-			//endTime := time.Now()
 
 			// We're done if we're not running in pipeline mode or if running in dry run mode.
 			if !config.Pipeline || config.DryRun {
@@ -323,7 +329,6 @@ func New() *cli.App {
 				S3Bucket:    config.S3Bucket,
 				S3KeyPrefix: config.S3KeyPrefix,
 			})
-			fmt.Println("\nReporting scans...")
 			if err := reporter.Report(scans, beginTime); err != nil {
 				return err
 			}
@@ -331,9 +336,9 @@ func New() *cli.App {
 			// We're done, but first check to see if any defects or vulnerabilities
 			// meet or exceed the severity specified in the fail flag.
 			if checkFailed(scans, config.Severity) {
-				return fmt.Errorf("%s severity %s threshold met or exceeded", app.Name, config.Severity)
+				return fmt.Errorf("%s severity %s threshold met or exceeded", appName, config.Severity)
 			}
-			fmt.Printf("\n%s succeeded.\n", app.Name)
+			fmt.Printf("\n%s succeeded.\n", appName)
 			return nil
 		},
 	}
@@ -422,6 +427,7 @@ func getBuildInfoTable() table.Table {
 func getConfigTable() table.Table {
 	tbl := table.New("Name", "Value")
 	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
+	tbl.AddRow("Dry Run", config.DryRun)
 	tbl.AddRow("Force", config.Force)
 	tbl.AddRow("Verbose", config.Verbose)
 	tbl.AddRow("Severity", config.Severity)

@@ -18,10 +18,10 @@ import (
 
 // ScanReporterConfig represents the configuration for a ScanReporter.
 type ScanReporterConfig struct {
-	CacheDir    string `json:"cacheDir"`
 	Force       bool   `json:"force"`
 	Verbose     bool   `json:"verbose"`
 	GitRepo     string `json:"gitRepo"`
+	CacheDir    string `json:"cacheDir"`
 	BuildId     string `json:"buildId"`
 	S3Bucket    string `json:"s3Bucket"`
 	S3KeyPrefix string `json:"s3KeyPrefix"`
@@ -45,6 +45,7 @@ func (r ScanReporter) Report(scans []Scan, timestamp time.Time) error {
 	}
 
 	// Cache all scan output results.
+	fmt.Println("\nCaching scans ...")
 	for _, scan := range scans {
 		if err := r.CacheScan(scan); err != nil {
 			return err
@@ -60,12 +61,13 @@ func (r ScanReporter) Report(scans []Scan, timestamp time.Time) error {
 	// If no S3 bucket is specified, we're done with reporting.
 	if r.Config.S3Bucket == "" {
 		if r.Config.Verbose {
-			fmt.Println("no S3 bucket specified, skipping upload")
+			fmt.Println("\nNo S3 bucket specified. skipping upload ...")
 		}
 		return nil
 	}
 
 	// Upload all cached scan results.
+	fmt.Println("\nUploading scans ...")
 	for _, scan := range scans {
 		if err := r.UploadScan(scan); err != nil {
 			return err
@@ -95,9 +97,7 @@ func (r ScanReporter) CacheScan(scan Scan) error {
 	if err != nil {
 		return err
 	}
-	if r.Config.Verbose {
-		fmt.Printf("caching scan: %s\n", cachePath)
-	}
+	fmt.Printf("caching scan: %s\n", cachePath)
 	if err := ensureDir(path.Dir(cachePath)); err != nil {
 		return err
 	}

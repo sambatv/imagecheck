@@ -40,11 +40,6 @@ func (s *Scan) Failed(severity string) bool {
 	}
 }
 
-// IsZero returns true if the scan is empty, or zero-valued.
-func (s *Scan) IsZero() bool {
-	return s == &Scan{}
-}
-
 // Score scores the scan based on the severity of the vulnerability.
 func (s *Scan) Score(severity string) {
 	severity = strings.ToLower(severity)
@@ -70,17 +65,4 @@ func (s *Scan) FileName() string {
 		return fmt.Sprintf("%s.%s.%s.json", s.ScanTool, s.ScanType, s.ScanTarget)
 	}
 	return fmt.Sprintf("%s.%s.json", s.ScanTool, s.ScanType)
-}
-
-// Scans is a slice of scans that can be reported.
-type Scans []Scan
-
-// Failure returns true if any of the scans failed.
-func (scans Scans) Failure(severity string) bool {
-	for _, scan := range scans {
-		if scan.Failed(severity) {
-			return true
-		}
-	}
-	return false
 }

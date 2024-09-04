@@ -38,7 +38,7 @@ func NewScanReporter(config ScanReporterConfig) *ScanReporter {
 }
 
 // Report reports the results of scans.
-func (r ScanReporter) Report(scans Scans, timestamp time.Time) error {
+func (r ScanReporter) Report(scans []Scan, timestamp time.Time) error {
 	// Ensure the cache directory exists.
 	if err := ensureDir(r.Config.CacheDir); err != nil {
 		return err
@@ -230,7 +230,7 @@ type Summary struct {
 	Timestamp    string            `json:"timestamp"`
 	DurationSecs float64           `json:"durationSecs"`
 	Scanners     map[string]string `json:"scanners"`
-	Scans        Scans             `json:"scans"`
+	Scans        []Scan            `json:"scans"`
 }
 
 // FileName returns the name of the cache file for the Summary.
@@ -239,7 +239,7 @@ func (r Summary) FileName() string {
 }
 
 // NewSummary creates a new Summary report.
-func NewSummary(scans Scans, timestamp time.Time) Summary {
+func NewSummary(scans []Scan, timestamp time.Time) Summary {
 	scanTools := make(map[string]string)
 	for name, scanTool := range ScanTools {
 		scanTools[name] = scanTool.Version()

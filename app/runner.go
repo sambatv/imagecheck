@@ -27,12 +27,12 @@ func NewScanRunner(config ScanRunnerConfig) *ScanRunner {
 }
 
 // Scan runs the scans and returns their results.
-func (r *ScanRunner) Scan(image string) Scans {
+func (r *ScanRunner) Scan(image string) []Scan {
 	runScan := func(scanner, scanType, scanTarget string) Scan {
 		return ScanTools[scanner].Scan(scanType, scanTarget, r.Config.Severity, r.Config.PipelineMode)
 	}
 
-	scans := make(Scans, 0)
+	scans := make([]Scan, 0)
 	scans = append(scans, runScan("grype", "files", currentDir))
 	//scans = append(scans, runScan("trivy", "config", currentDir))
 	//scans = append(scans, runScan("trivy", "files", currentDir))
@@ -52,9 +52,6 @@ type ScanTool interface {
 
 	// Name returns the name of the scanner application.
 	Name() string
-
-	//// Path returns the path to the scanner application.
-	//Path() string
 
 	// Version returns the version of the scanner application.
 	Version() string

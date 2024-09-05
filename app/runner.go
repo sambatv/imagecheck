@@ -78,7 +78,7 @@ func execScanner(cmdline string, dryRun, pipelineMode bool) (int, []byte, error)
 		err      error
 	)
 	if pipelineMode {
-		fmt.Printf("\nrunning: %s\n", cmdline)
+		fmt.Printf("running: %s\n", cmdline)
 	}
 
 	// Build command.

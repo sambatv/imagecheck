@@ -45,7 +45,7 @@ func (r ScanReporter) Report(scans []Scan, timestamp time.Time) error {
 	}
 
 	// Cache all scan output results.
-	fmt.Println("\nCaching scans ...")
+	fmt.Println("Caching scans ...")
 	for _, scan := range scans {
 		if err := r.CacheScan(scan); err != nil {
 			return err

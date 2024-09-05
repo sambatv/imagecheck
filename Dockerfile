@@ -14,5 +14,5 @@ RUN apk update && apk upgrade
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
 COPY --from=builder /app/imagecheck /usr/local/bin/
 USER 1001:1001
-WORKDIR /
+WORKDIR /app
 ENTRYPOINT ["/usr/local/bin/imagecheck"]

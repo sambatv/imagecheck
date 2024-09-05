@@ -201,6 +201,16 @@ var s3KeyPrefixFlag = cli.StringFlag{
 	Category:    "Reporting",
 }
 
+var disabled bool
+var disabledFlag = cli.BoolFlag{
+	Name:        "disable",
+	Usage:       "disable application processing",
+	Destination: &disabled,
+	EnvVars:     []string{fmt.Sprintf("%s_DISABLED", strings.ToUpper(app.Name))},
+	Category:    "General",
+	Hidden:      true,
+}
+
 var showConfig bool
 var showConfigFlag = cli.BoolFlag{
 	Name:        "config",
@@ -249,6 +259,7 @@ func New() *cli.App {
 		Description:          description,
 		EnableBashCompletion: true,
 		Flags: []cli.Flag{
+			&disabledFlag,
 			&dryRunFlag,
 			&forceFlag,
 			&verboseFlag,
@@ -266,7 +277,14 @@ func New() *cli.App {
 			&showVersionFlag,
 		},
 		Action: func(c *cli.Context) error {
-			// Show the application build info, cfg, scanner tools, version as needed and exit.
+			// Ensure application is not disabled, show the application build info,
+			// config info, scanner tools info, and version info as needed and exit.
+			if disabled {
+				fmt.Println("exiting disabled application")
+				return nil
+			}
+
+			// Show the application build, config, scanners, and version info as needed and exit.
 			if showBuildInfo {
 				tbl := getBuildInfoTable()
 				tbl.Print()

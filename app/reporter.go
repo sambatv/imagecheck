@@ -76,7 +76,7 @@ func (r ScanReporter) Report(scans []Scan, timestamp time.Time) error {
 	}
 
 	// Upload the scan summary.
-	if err := r.UploadSummary(summary); err != nil {
+	if err := r.UploadSummary(); err != nil {
 		return err
 	}
 	return nil
@@ -130,7 +130,7 @@ func (r ScanReporter) UploadScan(scan Scan) error {
 }
 
 // UploadSummary uploads the scan summary cache file to S3.
-func (r ScanReporter) UploadSummary(summary Summary) error {
+func (r ScanReporter) UploadSummary() error {
 	filePath := summaryPath()
 	srcPath := r.CachePath(filePath)
 	dstKey := r.S3Key(filePath)
@@ -150,12 +150,6 @@ func ensureDir(path string) error {
 		return os.MkdirAll(path, 0755)
 	}
 	return nil
-}
-
-// fileExists tests if a file exists in the filesystem.
-func fileExists(path string) bool {
-	_, err := os.Stat(path)
-	return !os.IsNotExist(err)
 }
 
 func s3ObjectExists(bucket, key string) (bool, error) {

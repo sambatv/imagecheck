@@ -77,14 +77,9 @@ func init() {
 	if buildInfo, err = getBuildInfo(); err != nil {
 		panic(err)
 	}
-	if defaultCacheDir, err = homeDirPath(".cache", appName); err != nil {
-		panic(err)
-	}
 }
 
 var buildInfo BuildInfo
-
-var defaultCacheDir string
 
 const defaultSeverity = "medium"
 
@@ -181,10 +176,9 @@ var buildIdFlag = cli.StringFlag{
 
 var cacheDirFlag = cli.StringFlag{
 	Name:        "cache-dir",
-	Aliases:     []string{"d"},
 	Usage:       "The cache directory for S3 uploads in pipeline mode",
 	Destination: &config.CacheDir,
-	Value:       defaultCacheDir,
+	Value:       fmt.Sprintf("~/.cache/%s", appName),
 	EnvVars:     []string{fmt.Sprintf("%s_CACHEDIR", strings.ToUpper(appName))},
 	Category:    "Reporting",
 }
@@ -257,10 +251,22 @@ func New() *cli.App {
 				return fmt.Errorf("dirty git repository not allowed in pipeline mode")
 			}
 
-			// Normalize the severity flag value to lowercase and ensure it's valid.
+			// Normalize the --severity option value to lowercase and ensure it's valid.
 			config.Severity = strings.ToLower(config.Severity)
 			if !isValidSeverity(config.Severity) {
 				return fmt.Errorf("invalid severity: %s. Chose one of %s", config.Severity, strings.Join(validSeverities, ", "))
+			}
+
+			// Normalize the --cache-dir option to absolute path, expanding the home directory if necessary.
+			if strings.HasPrefix(config.CacheDir, "~/") {
+				homeDir, err := os.UserHomeDir()
+				if err != nil {
+					return err
+				}
+				cacheDir := strings.TrimPrefix(config.CacheDir, "~/")
+				config.CacheDir = filepath.Join(homeDir, cacheDir)
+			} else {
+				config.CacheDir, _ = filepath.Abs(config.CacheDir)
 			}
 
 			// Ensure required scan tools are available in PATH.
@@ -391,20 +397,6 @@ func getBuildInfo() (BuildInfo, error) {
 		return buildInfo, nil
 	}
 	return buildInfo, fmt.Errorf("failed to read build information")
-}
-
-// homeDirPath returns the absolute path of the home directory with the provided path parts.
-func homeDirPath(parts ...string) (string, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-
-	homeDirPath := homeDir
-	if len(parts) > 0 {
-		homeDirPath = filepath.Join(append([]string{homeDir}, parts...)...)
-	}
-	return homeDirPath, nil
 }
 
 // ----------------------------------------------------------------------------

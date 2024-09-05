@@ -123,7 +123,7 @@ var forceFlag = cli.BoolFlag{
 	Usage:       "Force scan results caching and S3 uploading if artifacts already exists",
 	Destination: &config.Force,
 	EnvVars:     []string{fmt.Sprintf("%s_FORCE", strings.ToUpper(appName))},
-	Category:    "Miscellaneous",
+	Category:    "Reporting",
 }
 
 var verboseFlag = cli.BoolFlag{
@@ -314,8 +314,8 @@ func New() *cli.App {
 			}
 
 			// Otherwise, continue pipeline mode processing by printing a table of scan results.
+			fmt.Println("\nRESULTS")
 			tbl := getScansTable(scans)
-			fmt.Println()
 			tbl.Print()
 			fmt.Println()
 

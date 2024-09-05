@@ -5,14 +5,20 @@ code and config artifacts for defects and vulnerabilities using multiple
 scanners, optionally uploading scan summaries and output to an S3 bucket.
 
 It is intended primarily to be used in a CI/CD pipeline after images are built
-and before they are pushed to a container registry. This is to ensure they are
-safe for use.
+and before they are pushed to a container registry to ensure they are safe for use.
 
 It is also intended to be used as a standalone tool for local development and
 testing before changes are committed to git repositories and pushed to their
 upstream remotes.
 
 ## Installation
+
+There are several ways to install the `imagecheck` application for use:
+
+1. [`install.sh`](#use-installsh-script) in its remote repository
+2. [`go install`](#use-go-install) on its remote repository
+3. [`go build`](#use-go-build) in its locally cloned repository
+4. [`docker pull`](#use-docker-pull) on its pushed container image
 
 ### Dependencies
 
@@ -69,7 +75,7 @@ GOBIN=~/bin go install github.com/sambatv/imagecheck@latest
 After installation, the `imagecheck` binary will be available in your
 `$HOME/bin` directory.
 
-### Use local build
+### Use go build
 
 You can also build the application locally:
 
@@ -82,7 +88,7 @@ make build
 After building, the `imagecheck` binary will be available in the repository
 root directory.
 
-### Use docker image from ghci.io registry
+### Use docker pull
 
 The `imagecheck` docker image can be pulled from the `ghci.io` registry:
 
@@ -99,7 +105,14 @@ docker run -it --rm ghcr.io/sambatv/imagecheck:latest --help
 The `imagecheck` binary is the entrypoint for the container image.
 
 Note that the docker image contains the `imagecheck` binary and the binaries
-of all the scanners used by it. 
+of all the scanners used by it.
+
+For convenience, you may wish to create a shell alias for the `docker run`
+command:
+
+```shell
+alias imagecheck='docker run -it --rm ghcr.io/sambatv/imagecheck:latest'
+```
 
 ## Usage
 
@@ -145,6 +158,7 @@ its image registry:
 ```shell
 imagecheck \
   --pipeline \
+  --cache-dir /app/cache \
   --s3-bucket $S3_BUCKET \
   --s3-key-prefix $S3_KEY_PREFIX \
   --git-repo $REPO_NAME \

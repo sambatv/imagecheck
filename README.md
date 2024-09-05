@@ -4,10 +4,8 @@ The `imagecheck` Golang application checks a container image and its associated
 source code and config artifacts for defects and vulnerabilities using multiple
 scanners, optionally uploading scan summaries and output to an S3 bucket.
 
-It is intended to be used in a CI/CD pipeline after images are built and before
-they are pushed to a container registry to ensure they are safe for use, but is
-also useful for local interactive development and testing before changes are
-committed.
+It is intended primarily to be used in a CI/CD pipeline after images are built
+and before they are pushed to a container registry to ensure they are safe for use.
 
 It is also intended to be used as a standalone tool for local development and
 testing before changes are committed to the repository and pushed to their
@@ -28,3 +26,8 @@ This repository is organized as follows:
 * [`Makefile`](Makefile) - project automation for developers
 * [`README.md`](README.md) - this document
 * [`VERSION`](VERSION) - application version file
+
+## Next steps
+
+[RTFM](https://sambatv.github.io/imagecheck) for more information on how to use
+the application.

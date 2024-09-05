@@ -81,6 +81,8 @@ func init() {
 
 var buildInfo BuildInfo
 
+var defaultCacheDir = fmt.Sprintf("~/.cache/%s", appName)
+
 const defaultSeverity = "medium"
 
 var validSeverities = []string{"critical", "high", "medium", "low"}
@@ -178,7 +180,7 @@ var cacheDirFlag = cli.StringFlag{
 	Name:        "cache-dir",
 	Usage:       "The cache directory for S3 uploads in pipeline mode",
 	Destination: &config.CacheDir,
-	Value:       fmt.Sprintf("~/.cache/%s", appName),
+	Value:       defaultCacheDir,
 	EnvVars:     []string{fmt.Sprintf("%s_CACHEDIR", strings.ToUpper(appName))},
 	Category:    "Reporting",
 }

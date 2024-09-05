@@ -94,7 +94,11 @@ func (s TrivyScanner) run(cmdline, scanType, scanTarget string, dryRun, pipeline
 	case "config":
 		results := data["Results"].([]any)
 		for _, result := range results {
-			misconfigurations := result.(map[string]any)["Misconfigurations"].([]any)
+			val, ok := result.(map[string]any)["Misconfigurations"]
+			if !ok {
+				continue
+			}
+			misconfigurations := val.(map[string]any)
 			for _, misconfiguration := range misconfigurations {
 				severity := misconfiguration.(map[string]any)["Severity"].(string)
 				scan.Score(severity)

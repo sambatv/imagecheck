@@ -112,7 +112,7 @@ var config struct {
 
 var dryRunFlag = cli.BoolFlag{
 	Name:        "dry-run",
-	Usage:       "Perform a dry run without actually running the scans",
+	Usage:       "perform a dry run without actually running the scans",
 	Destination: &config.DryRun,
 	EnvVars:     []string{fmt.Sprintf("%s_DRYRUN", strings.ToUpper(app.Name))},
 	Category:    "Scanning",
@@ -120,7 +120,7 @@ var dryRunFlag = cli.BoolFlag{
 var forceFlag = cli.BoolFlag{
 	Name:        "force",
 	Aliases:     []string{"f"},
-	Usage:       "Force scan results caching and S3 uploading if artifacts already exists",
+	Usage:       "force scan results caching and S3 uploading if artifacts already exists",
 	Destination: &config.Force,
 	EnvVars:     []string{fmt.Sprintf("%s_FORCE", strings.ToUpper(app.Name))},
 	Category:    "Reporting",
@@ -129,16 +129,16 @@ var forceFlag = cli.BoolFlag{
 var verboseFlag = cli.BoolFlag{
 	Name:        "verbose",
 	Aliases:     []string{"v"},
-	Usage:       "Display verbose output",
+	Usage:       "show verbose output",
 	Destination: &config.Verbose,
 	EnvVars:     []string{fmt.Sprintf("%s_VERBOSE", strings.ToUpper(app.Name))},
-	Category:    "Miscellaneous",
+	Category:    "Info",
 }
 
 var severityFlag = cli.StringFlag{
 	Name:        "severity",
 	Aliases:     []string{"s"},
-	Usage:       "Fail check if any defects or vulnerabilities meets or exceeds the specified severity",
+	Usage:       "fail check if any defects or vulnerabilities meets or exceeds the specified severity",
 	Value:       defaultSeverity,
 	Destination: &config.Severity,
 	EnvVars:     []string{fmt.Sprintf("%s_SEVERITY", strings.ToUpper(app.Name))},
@@ -149,7 +149,7 @@ var ignoreFixStatesFlag = cli.StringFlag{
 	Name:        "ignore",
 	Aliases:     []string{"i"},
 	Destination: &config.IgnoreFixStates,
-	Usage:       "Ignore defects or vulnerabilities with any of the specified fix states",
+	Usage:       "ignore defects or vulnerabilities with any of the specified fix states",
 	EnvVars:     []string{fmt.Sprintf("%s_IGNOREFIXSTATES", strings.ToUpper(app.Name))},
 	Category:    "Scanning",
 }
@@ -157,7 +157,7 @@ var ignoreFixStatesFlag = cli.StringFlag{
 var pipelineFlag = cli.BoolFlag{
 	Name:        "pipeline",
 	Aliases:     []string{"p"},
-	Usage:       "Run in pipeline mode",
+	Usage:       "run in pipeline mode",
 	Destination: &config.Pipeline,
 	EnvVars:     []string{fmt.Sprintf("%s_PIPELINE", strings.ToUpper(app.Name))},
 	Category:    "Reporting",
@@ -165,7 +165,7 @@ var pipelineFlag = cli.BoolFlag{
 
 var gitRepoFlag = cli.StringFlag{
 	Name:        "git-repo",
-	Usage:       "The git repository id containing the application being scanned",
+	Usage:       "id of git repository containing application being scanned",
 	Destination: &config.GitRepo,
 	EnvVars:     []string{fmt.Sprintf("%s_GITREPO", strings.ToUpper(app.Name))},
 	Category:    "Reporting",
@@ -173,7 +173,7 @@ var gitRepoFlag = cli.StringFlag{
 
 var buildIdFlag = cli.StringFlag{
 	Name:        "build-id",
-	Usage:       "The build id of the git repository pipeline of the application being scanned",
+	Usage:       "build id of git repository pipeline of application being scanned",
 	Destination: &config.BuildId,
 	EnvVars:     []string{fmt.Sprintf("%s_BUILDID", strings.ToUpper(app.Name))},
 	Category:    "Reporting",
@@ -181,7 +181,7 @@ var buildIdFlag = cli.StringFlag{
 
 var cacheDirFlag = cli.StringFlag{
 	Name:        "cache-dir",
-	Usage:       "The cache directory for S3 uploads in pipeline mode",
+	Usage:       "cache directory for S3 uploads in pipeline mode",
 	Destination: &config.CacheDir,
 	Value:       defaultCacheDir,
 	EnvVars:     []string{fmt.Sprintf("%s_CACHEDIR", strings.ToUpper(app.Name))},
@@ -190,7 +190,7 @@ var cacheDirFlag = cli.StringFlag{
 
 var s3BucketFlag = cli.StringFlag{
 	Name:        "s3-bucket",
-	Usage:       "The S3 bucket to upload scan results to",
+	Usage:       "bucket to upload scan results to",
 	Destination: &config.S3Bucket,
 	EnvVars:     []string{fmt.Sprintf("%s_S3BUCKET", strings.ToUpper(app.Name))},
 	Category:    "Reporting",
@@ -198,7 +198,7 @@ var s3BucketFlag = cli.StringFlag{
 
 var s3KeyPrefixFlag = cli.StringFlag{
 	Name:        "s3-key-prefix",
-	Usage:       "The S3 key prefix to upload scan results to",
+	Usage:       "key prefix to upload scan results to",
 	Destination: &config.S3KeyPrefix,
 	Value:       app.Name,
 	EnvVars:     []string{fmt.Sprintf("%s_S3KEYPREFIX", strings.ToUpper(app.Name))},
@@ -207,28 +207,28 @@ var s3KeyPrefixFlag = cli.StringFlag{
 
 var showConfigFlag = cli.BoolFlag{
 	Name:        "config",
-	Usage:       "Show the application configuration and exit",
+	Usage:       "show application configuration and exit",
 	Destination: &config.showConfig,
 	Category:    "Info",
 }
 
 var showBuildInfoFlag = cli.BoolFlag{
 	Name:        "buildinfo",
-	Usage:       "Show the application build information and exit",
+	Usage:       "show application build information and exit",
 	Destination: &config.showBuildInfo,
 	Category:    "Info",
 }
 
 var showScannersFlag = cli.BoolFlag{
 	Name:        "scanners",
-	Usage:       "Show the application scanners and exit",
+	Usage:       "show application scanners and exit",
 	Destination: &config.showScanners,
 	Category:    "Info",
 }
 
 var showVersionFlag = cli.BoolFlag{
 	Name:        "version",
-	Usage:       "Show the application version and exit",
+	Usage:       "show application version and exit",
 	Destination: &config.showVersion,
 	Category:    "Info",
 }

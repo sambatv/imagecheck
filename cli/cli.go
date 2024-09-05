@@ -104,6 +104,10 @@ var config struct {
 	CacheDir        string `json:"cacheDir"`
 	S3Bucket        string `json:"s3Bucket"`
 	S3KeyPrefix     string `json:"s3KeyPrefix"`
+	showConfig      bool
+	showBuildInfo   bool
+	showScanners    bool
+	showVersion     bool
 }
 
 var dryRunFlag = cli.BoolFlag{
@@ -201,6 +205,34 @@ var s3KeyPrefixFlag = cli.StringFlag{
 	Category:    "Reporting",
 }
 
+var showConfigFlag = cli.BoolFlag{
+	Name:        "config",
+	Usage:       "Show the application configuration and exit",
+	Destination: &config.showConfig,
+	Category:    "Info",
+}
+
+var showBuildInfoFlag = cli.BoolFlag{
+	Name:        "buildinfo",
+	Usage:       "Show the application build information and exit",
+	Destination: &config.showBuildInfo,
+	Category:    "Info",
+}
+
+var showScannersFlag = cli.BoolFlag{
+	Name:        "scanners",
+	Usage:       "Show the application scanners and exit",
+	Destination: &config.showScanners,
+	Category:    "Info",
+}
+
+var showVersionFlag = cli.BoolFlag{
+	Name:        "version",
+	Usage:       "Show the application version and exit",
+	Destination: &config.showVersion,
+	Category:    "Info",
+}
+
 // ----------------------------------------------------------------------------
 // CLI application
 // ----------------------------------------------------------------------------
@@ -224,8 +256,33 @@ func New() *cli.App {
 			&cacheDirFlag,
 			&s3BucketFlag,
 			&s3KeyPrefixFlag,
+			&showBuildInfoFlag,
+			&showConfigFlag,
+			&showScannersFlag,
+			&showVersionFlag,
 		},
 		Action: func(c *cli.Context) error {
+			// Show the application build info, config, scanner tools, version as needed and exit.
+			if config.showBuildInfo {
+				tbl := getBuildInfoTable()
+				tbl.Print()
+				return nil
+			}
+			if config.showConfig {
+				tbl := getConfigTable()
+				tbl.Print()
+				return nil
+			}
+			if config.showScanners {
+				tbl := getScanToolsTable()
+				tbl.Print()
+				return nil
+			}
+			if config.showVersion {
+				fmt.Println(app.Version)
+				return nil
+			}
+
 			// Ensure a single argument is provided, at most, and set the image to that argument.
 			if c.NArg() > 1 {
 				return fmt.Errorf("too many image arguments")

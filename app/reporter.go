@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -85,23 +86,18 @@ func (r ScanReporter) CachePath(filename string) string {
 	return path.Join(r.Config.CacheDir, r.Config.GitRepo, r.Config.BuildId, filename)
 }
 
-// CacheScan caches the scan results to a local file.
+// CacheScan caches the scan output to a local file.
 func (r ScanReporter) CacheScan(scan Scan) error {
-	cachePath := r.CachePath(scan.FileName())
+	cachePath := r.CachePath(scanPath(scan))
 	if fileExists(cachePath) && !r.Config.Force {
 		return fmt.Errorf("scan already cached: %s", cachePath)
 	}
 
-	// Write the json data to the cache file.
-	data, err := json.Marshal(scan)
-	if err != nil {
-		return err
-	}
 	fmt.Printf("caching scan: %s\n", cachePath)
 	if err := ensureDir(path.Dir(cachePath)); err != nil {
 		return err
 	}
-	return os.WriteFile(cachePath, data, 0644)
+	return os.WriteFile(cachePath, scan.stdout, 0644)
 }
 
 // CacheSummary caches the scan summary to a local file.
@@ -129,7 +125,7 @@ func (r ScanReporter) S3Key(filename string) string {
 
 // UploadScan uploads the scan cache file to S3.
 func (r ScanReporter) UploadScan(scan Scan) error {
-	fileName := scan.FileName()
+	fileName := scanPath(scan)
 	s3Key := r.S3Key(fileName)
 	uploaded, err := s3ObjectExists(r.Config.S3Bucket, s3Key)
 	if err != nil {
@@ -235,7 +231,7 @@ type Summary struct {
 
 // FileName returns the name of the cache file for the Summary.
 func (r Summary) FileName() string {
-	return "summary.json"
+	return fmt.Sprintf("%s.summary.json", Name)
 }
 
 // NewSummary creates a new Summary report.
@@ -253,4 +249,13 @@ func NewSummary(scans []Scan, timestamp time.Time) Summary {
 		Scanners:     scanTools,
 		Scans:        scans,
 	}
+}
+
+// scanPath returns the path of the scan output file.
+func scanPath(s Scan) string {
+	const fileName = "scan.json"
+	if s.ScanType == "image" {
+		return filepath.Join(s.ScanTool, s.ScanType, s.ScanTarget, fileName)
+	}
+	return filepath.Join(s.ScanTool, s.ScanType, fileName)
 }

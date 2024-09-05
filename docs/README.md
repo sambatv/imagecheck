@@ -112,7 +112,7 @@ imagecheck --help
 
 ### Scanning
 
-The `imagecheck scan` command drives the following open-source scanners:
+The `imagecheck` command drives the following open-source scanners:
 
 * [grype](https://github.com/anchore/grype)
 * [trivy](https://https://github.com/aquasecurity/trivy)
@@ -130,7 +130,7 @@ If an image argument is provided, it performs the following additional checks:
 * A `trufflehog` scan of the built image
 
 ```shell
-imagecheck scan $IMAGE
+imagecheck $IMAGE
 ```
 
 This mode of operation is intended for local development and testing.
@@ -138,17 +138,18 @@ Read further for details on how to use `imagecheck` in a CI/CD pipeline.
 
 ### Reporting
 
-In a CI/CD pipeline, the `imagecheck scan` command should be run with the
+In a CI/CD pipeline, the `imagecheck` command should be run with the
 following options, after an image has been built and before it is pushed to
 its image registry:
 
 ```shell
 imagecheck \
+  --pipeline \
   --s3-bucket $S3_BUCKET \
   --s3-key-prefix $S3_KEY_PREFIX \
   --git-repo $REPO_NAME \
   --build $BUILD_ID \
-  scan $IMAGE 
+  $IMAGE 
 ```
 
 Where:

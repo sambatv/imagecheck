@@ -1,7 +1,6 @@
 package app
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -57,12 +56,4 @@ func (s *Scan) Score(severity string) {
 	default:
 		s.NumUnknown++
 	}
-}
-
-// FileName returns the name of the file for the scan.
-func (s *Scan) FileName() string {
-	if s.ScanType == "image" {
-		return fmt.Sprintf("%s.%s.%s.json", s.ScanTool, s.ScanType, s.ScanTarget)
-	}
-	return fmt.Sprintf("%s.%s.json", s.ScanTool, s.ScanType)
 }

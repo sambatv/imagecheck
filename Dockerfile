@@ -10,6 +10,7 @@ COPY . .
 RUN make build
 
 FROM alpine:3.20.2
+RUN apk update && apk upgrade
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
 COPY --from=builder /app/imagecheck /usr/local/bin/
 USER 1001:1001

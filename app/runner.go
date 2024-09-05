@@ -19,28 +19,27 @@ type ScanRunnerConfig struct {
 
 // ScanRunner runs scans.
 type ScanRunner struct {
-	Config ScanRunnerConfig
+	cfg ScanRunnerConfig
 }
 
 // NewScanRunner creates a new configured ScanRunner.
 func NewScanRunner(config ScanRunnerConfig) *ScanRunner {
-	return &ScanRunner{Config: config}
+	return &ScanRunner{cfg: config}
 }
 
 // Scan runs the scans and returns their results.
 func (r *ScanRunner) Scan(image string) []Scan {
 	runScan := func(scanner, scanType, scanTarget string) Scan {
-		return ScanTools[scanner].Scan(scanType, scanTarget, r.Config.Severity, r.Config.DryRun, r.Config.PipelineMode)
+		return ScanTools[scanner].Scan(scanType, scanTarget, r.cfg.Severity, r.cfg.DryRun, r.cfg.PipelineMode)
 	}
 
 	scans := make([]Scan, 0)
 	scans = append(scans, runScan("grype", "files", currentDir))
-	//scans = append(scans, runScan("trivy", "config", currentDir))
-	//scans = append(scans, runScan("trivy", "files", currentDir))
+	scans = append(scans, runScan("trivy", "config", currentDir))
+	scans = append(scans, runScan("trivy", "files", currentDir))
 	//scans = append(scans, runScan("trufflehog", "files", currentDir))
 	if image != "" {
 		scans = append(scans, runScan("grype", "image", image))
-		//scans = append(scans, runScan("trivy", "image", image))
 		//scans = append(scans, runScan("trufflehog", "image", image))
 	}
 	return scans

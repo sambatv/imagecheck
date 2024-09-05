@@ -30,18 +30,18 @@ type ScanReporterConfig struct {
 
 // ScanReporter reports the results of scans.
 type ScanReporter struct {
-	Config ScanReporterConfig
+	cfg ScanReporterConfig
 }
 
 // NewScanReporter creates a new configured ScanReporter.
 func NewScanReporter(config ScanReporterConfig) *ScanReporter {
-	return &ScanReporter{Config: config}
+	return &ScanReporter{cfg: config}
 }
 
 // Report reports the results of scans.
 func (r ScanReporter) Report(scans []Scan, timestamp time.Time) error {
 	// Ensure the cache directory exists.
-	if err := ensureDir(r.Config.CacheDir); err != nil {
+	if err := ensureDir(r.cfg.CacheDir); err != nil {
 		return err
 	}
 
@@ -60,8 +60,8 @@ func (r ScanReporter) Report(scans []Scan, timestamp time.Time) error {
 	}
 
 	// If no S3 bucket is specified, we're done with reporting.
-	if r.Config.S3Bucket == "" {
-		if r.Config.Verbose {
+	if r.cfg.S3Bucket == "" {
+		if r.cfg.Verbose {
 			fmt.Println("\nNo S3 bucket specified. skipping upload ...")
 		}
 		return nil
@@ -83,13 +83,13 @@ func (r ScanReporter) Report(scans []Scan, timestamp time.Time) error {
 }
 
 func (r ScanReporter) CachePath(filename string) string {
-	return path.Join(r.Config.CacheDir, r.Config.GitRepo, r.Config.BuildId, filename)
+	return path.Join(r.cfg.CacheDir, r.cfg.GitRepo, r.cfg.BuildId, filename)
 }
 
 // CacheScan caches the scan output to a local file.
 func (r ScanReporter) CacheScan(scan Scan) error {
 	cachePath := r.CachePath(scanPath(scan))
-	if fileExists(cachePath) && !r.Config.Force {
+	if fileExists(cachePath) && !r.cfg.Force {
 		return fmt.Errorf("scan already cached: %s", cachePath)
 	}
 
@@ -103,7 +103,7 @@ func (r ScanReporter) CacheScan(scan Scan) error {
 // CacheSummary caches the scan summary to a local file.
 func (r ScanReporter) CacheSummary(summary Summary) error {
 	cachePath := r.CachePath(summary.FileName())
-	if fileExists(cachePath) && !r.Config.Force {
+	if fileExists(cachePath) && !r.cfg.Force {
 		return fmt.Errorf("summary already cached: %s", cachePath)
 	}
 
@@ -117,38 +117,38 @@ func (r ScanReporter) CacheSummary(summary Summary) error {
 
 // S3Key returns the S3 key for the scan cache file.
 func (r ScanReporter) S3Key(filename string) string {
-	if r.Config.S3KeyPrefix != "" {
-		return path.Join(r.Config.S3KeyPrefix, r.Config.GitRepo, r.Config.BuildId, filename)
+	if r.cfg.S3KeyPrefix != "" {
+		return path.Join(r.cfg.S3KeyPrefix, r.cfg.GitRepo, r.cfg.BuildId, filename)
 	}
-	return path.Join(r.Config.GitRepo, r.Config.BuildId, filename)
+	return path.Join(r.cfg.GitRepo, r.cfg.BuildId, filename)
 }
 
 // UploadScan uploads the scan cache file to S3.
 func (r ScanReporter) UploadScan(scan Scan) error {
 	fileName := scanPath(scan)
 	s3Key := r.S3Key(fileName)
-	uploaded, err := s3ObjectExists(r.Config.S3Bucket, s3Key)
+	uploaded, err := s3ObjectExists(r.cfg.S3Bucket, s3Key)
 	if err != nil {
 		return err
 	}
-	if uploaded && !r.Config.Force {
+	if uploaded && !r.cfg.Force {
 		return fmt.Errorf("scan already uploaded: %s", s3Key)
 	}
-	return uploadS3Object(r.Config.S3Bucket, s3Key, r.CachePath(fileName))
+	return uploadS3Object(r.cfg.S3Bucket, s3Key, r.CachePath(fileName))
 }
 
 // UploadSummary uploads the scan summary cache file to S3.
 func (r ScanReporter) UploadSummary(summary Summary) error {
 	fileName := summary.FileName()
 	s3Key := r.S3Key(fileName)
-	uploaded, err := s3ObjectExists(r.Config.S3Bucket, s3Key)
+	uploaded, err := s3ObjectExists(r.cfg.S3Bucket, s3Key)
 	if err != nil {
 		return err
 	}
-	if uploaded && !r.Config.Force {
+	if uploaded && !r.cfg.Force {
 		return fmt.Errorf("summary already uploaded: %s", s3Key)
 	}
-	return uploadS3Object(r.Config.S3Bucket, s3Key, r.CachePath(fileName))
+	return uploadS3Object(r.cfg.S3Bucket, s3Key, r.CachePath(fileName))
 }
 
 // ensureDir ensures directory exists in the filesystem.

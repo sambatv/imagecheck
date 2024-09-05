@@ -89,10 +89,6 @@ func (r ScanReporter) CachePath(filename string) string {
 // CacheScan caches the scan output to a local file.
 func (r ScanReporter) CacheScan(scan Scan) error {
 	cachePath := r.CachePath(scanPath(scan))
-	if fileExists(cachePath) && !r.cfg.Force {
-		return fmt.Errorf("scan already cached: %s", cachePath)
-	}
-
 	fmt.Printf("caching scan: %s\n", cachePath)
 	if err := ensureDir(path.Dir(cachePath)); err != nil {
 		return err
@@ -102,12 +98,7 @@ func (r ScanReporter) CacheScan(scan Scan) error {
 
 // CacheSummary caches the scan summary to a local file.
 func (r ScanReporter) CacheSummary(summary Summary) error {
-	cachePath := r.CachePath(summary.FileName())
-	if fileExists(cachePath) && !r.cfg.Force {
-		return fmt.Errorf("summary already cached: %s", cachePath)
-	}
-
-	// Write the json data to the cache file.
+	cachePath := r.CachePath(summaryPath())
 	data, err := json.Marshal(summary)
 	if err != nil {
 		return err
@@ -125,30 +116,32 @@ func (r ScanReporter) S3Key(filename string) string {
 
 // UploadScan uploads the scan cache file to S3.
 func (r ScanReporter) UploadScan(scan Scan) error {
-	fileName := scanPath(scan)
-	s3Key := r.S3Key(fileName)
-	uploaded, err := s3ObjectExists(r.cfg.S3Bucket, s3Key)
+	filePath := scanPath(scan)
+	srcPath := r.CachePath(filePath)
+	dstKey := r.S3Key(filePath)
+	uploaded, err := s3ObjectExists(r.cfg.S3Bucket, dstKey)
 	if err != nil {
 		return err
 	}
 	if uploaded && !r.cfg.Force {
-		return fmt.Errorf("scan already uploaded: %s", s3Key)
+		return fmt.Errorf("scan already uploaded: %s", dstKey)
 	}
-	return uploadS3Object(r.cfg.S3Bucket, s3Key, r.CachePath(fileName))
+	return uploadS3Object(r.cfg.S3Bucket, dstKey, srcPath)
 }
 
 // UploadSummary uploads the scan summary cache file to S3.
 func (r ScanReporter) UploadSummary(summary Summary) error {
-	fileName := summary.FileName()
-	s3Key := r.S3Key(fileName)
-	uploaded, err := s3ObjectExists(r.cfg.S3Bucket, s3Key)
+	filePath := summaryPath()
+	srcPath := r.CachePath(filePath)
+	dstKey := r.S3Key(filePath)
+	uploaded, err := s3ObjectExists(r.cfg.S3Bucket, dstKey)
 	if err != nil {
 		return err
 	}
 	if uploaded && !r.cfg.Force {
-		return fmt.Errorf("summary already uploaded: %s", s3Key)
+		return fmt.Errorf("summary already uploaded: %s", dstKey)
 	}
-	return uploadS3Object(r.cfg.S3Bucket, s3Key, r.CachePath(fileName))
+	return uploadS3Object(r.cfg.S3Bucket, dstKey, srcPath)
 }
 
 // ensureDir ensures directory exists in the filesystem.
@@ -229,11 +222,6 @@ type Summary struct {
 	Scans        []Scan            `json:"scans"`
 }
 
-// FileName returns the name of the cache file for the Summary.
-func (r Summary) FileName() string {
-	return fmt.Sprintf("%s.summary.json", Name)
-}
-
 // NewSummary creates a new Summary report.
 func NewSummary(scans []Scan, timestamp time.Time) Summary {
 	scanTools := make(map[string]string)
@@ -258,4 +246,9 @@ func scanPath(s Scan) string {
 		return filepath.Join(s.ScanTool, s.ScanType, s.ScanTarget, fileName)
 	}
 	return filepath.Join(s.ScanTool, s.ScanType, fileName)
+}
+
+// summaryPath returns the path of the summary output file.
+func summaryPath() string {
+	return fmt.Sprintf("%s.summary.json", Name)
 }

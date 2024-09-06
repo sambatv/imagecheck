@@ -180,7 +180,7 @@ func New() *cli.App {
 					if err := app.SaveSettings(settings, settingsFile); err != nil {
 						return err
 					}
-					fmt.Printf("initialized %s settings in %s\n", metadata.Name, defaultSettingsFile)
+					fmt.Printf("initialized %s settings in %s\n", metadata.Name, settingsFile)
 					return nil
 				},
 			},

@@ -136,10 +136,26 @@ directory to create a `.imagecheck.json` settings file in it:
 imagecheck init
 ```
 
-This settings file should be committed to the repository and is automatically
-detected when present. Multiple settings files can be created for different
-environments and branches, and can be selected for use with the `--settings`
-option.
+This settings file contains settings used by the `imagecheck scan` command and
+is automatically detected by the `imagecheck scan` command when present.
+
+It contains:
+
+* the version of the `imagecheck` application used to generate the settings file
+* the timestamp of the settings file generation
+* the disabled status of all scanning
+* the scan settings for all scanners used by `imagecheck` in order of scanning
+
+The generated settings file should be committed to the repository for detection
+by the `imagecheck scan` command when run in a build pipeline.
+
+Multiple settings files can be created for different environments and branches,
+and can be selected for use with the `--settings`option.
+
+```shell
+imagecheck init --settings .cache/imagecheck/prod.json
+imagecheck scan --settings .cache/imagecheck/prod.json $IMAGE
+```
 
 ### Scanning
 

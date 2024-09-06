@@ -459,7 +459,7 @@ func getConfigTable() table.Table {
 	tbl.AddRow("Dry Run", dryRun)
 	tbl.AddRow("Verbose", verbose)
 	tbl.AddRow("Severity", severity)
-	tbl.AddRow("Ignore ", ignore)
+	tbl.AddRow("Ignore ", strings.Join(ignore.Value(), ", "))
 	tbl.AddRow("Pipeline", pipeline)
 	tbl.AddRow("Git Repo", gitRepo)
 	tbl.AddRow("Build Id", buildId)

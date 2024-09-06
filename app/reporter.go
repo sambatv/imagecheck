@@ -3,8 +3,8 @@ package app
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"github.com/sambatv/imagecheck/metadata"
 	"os"
 	"path"
 	"path/filepath"
@@ -14,12 +14,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
 // ScanReporterConfig represents the configuration for a ScanReporter.
 type ScanReporterConfig struct {
-	Force       bool   `json:"force"`
 	Verbose     bool   `json:"verbose"`
 	GitRepo     string `json:"gitRepo"`
 	CacheDir    string `json:"cacheDir"`
@@ -119,13 +117,6 @@ func (r ScanReporter) UploadScan(scan Scan) error {
 	filePath := scanPath(scan)
 	srcPath := r.CachePath(filePath)
 	dstKey := r.S3Key(filePath)
-	uploaded, err := s3ObjectExists(r.cfg.S3Bucket, dstKey)
-	if err != nil {
-		return err
-	}
-	if uploaded && !r.cfg.Force {
-		return fmt.Errorf("scan already uploaded: %s", dstKey)
-	}
 	return uploadS3Object(r.cfg.S3Bucket, dstKey, srcPath)
 }
 
@@ -134,13 +125,6 @@ func (r ScanReporter) UploadSummary() error {
 	filePath := summaryPath()
 	srcPath := r.CachePath(filePath)
 	dstKey := r.S3Key(filePath)
-	uploaded, err := s3ObjectExists(r.cfg.S3Bucket, dstKey)
-	if err != nil {
-		return err
-	}
-	if uploaded && !r.cfg.Force {
-		return fmt.Errorf("summary already uploaded: %s", dstKey)
-	}
 	return uploadS3Object(r.cfg.S3Bucket, dstKey, srcPath)
 }
 
@@ -150,33 +134,6 @@ func ensureDir(path string) error {
 		return os.MkdirAll(path, 0755)
 	}
 	return nil
-}
-
-func s3ObjectExists(bucket, key string) (bool, error) {
-	// Load the default AWS configuration
-	cfg, err := config.LoadDefaultConfig(context.TODO())
-	if err != nil {
-		return false, fmt.Errorf("unable to load AWS SDK config, %v", err)
-	}
-
-	// Create an S3 client and make a HeadObject request to check if the object exists
-	client := s3.NewFromConfig(cfg)
-	_, err = client.HeadObject(context.TODO(), &s3.HeadObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
-	})
-
-	// If the error is nil, the object exists.
-	if err == nil {
-		return true, nil
-	}
-
-	// Otherwise, check if the error is a NotFound error
-	var notFoundErr *types.NotFound
-	if ok := errors.As(err, &notFoundErr); ok {
-		return false, nil
-	}
-	return false, fmt.Errorf("failed to check if object exists: %v", err)
 }
 
 func uploadS3Object(bucket, key, filePath string) error {
@@ -223,9 +180,9 @@ func NewSummary(scans []Scan, timestamp time.Time) Summary {
 		scanTools[name] = scanTool.Version()
 	}
 	return Summary{
-		Version:      Version,
-		Hostname:     hostname,
-		Username:     username,
+		Version:      metadata.Version,
+		Hostname:     metadata.Hostname,
+		Username:     metadata.Username,
 		Timestamp:    timestamp.Format(time.RFC3339),
 		DurationSecs: time.Since(timestamp).Seconds(),
 		Scanners:     scanTools,
@@ -244,5 +201,5 @@ func scanPath(s Scan) string {
 
 // summaryPath returns the path of the summary output file.
 func summaryPath() string {
-	return fmt.Sprintf("%s.summary.json", Name)
+	return fmt.Sprintf("%s.summary.json", metadata.Name)
 }

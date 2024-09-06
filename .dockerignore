@@ -1,6 +1,9 @@
 # build output
 imagecheck
 
+# config files
+.imagecheck.json
+
 # markdown files
 *.md
 

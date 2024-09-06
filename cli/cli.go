@@ -3,12 +3,8 @@ package cli
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
-	"path/filepath"
-	"runtime/debug"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -17,14 +13,211 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/sambatv/imagecheck/app"
+	"github.com/sambatv/imagecheck/metadata"
 )
 
 // ----------------------------------------------------------------------------
-// CLI application metadata
+// CLI application constants
 // ----------------------------------------------------------------------------
 
-const usage = "Check image for defects and vulnerabilities"
-const description = `This application checks a container image and all associated source code and
+const defaultCacheDir = "cache"
+
+const defaultConfigFile = ".imagecheck.json"
+
+const defaultSeverity = "medium"
+
+var validSeverities = []string{"critical", "high", "medium", "low"}
+
+var validIgnoreFixStates = []string{"fixed", "not-fixed", "wont-fix", "unknown"}
+
+// ----------------------------------------------------------------------------
+// CLI application flags
+// ----------------------------------------------------------------------------
+
+var configFile string
+var configFileFlag = cli.StringFlag{
+	Name:        "config-file",
+	Usage:       "path to configuration file",
+	Value:       defaultConfigFile,
+	Destination: &configFile,
+	EnvVars:     []string{fmt.Sprintf("%s_CONFIGFILE", strings.ToUpper(metadata.Name))},
+	Category:    "Scanning",
+}
+
+var force bool
+var forceFlag = cli.BoolFlag{
+	Name:        "force",
+	Usage:       "force the scan to run even if the git repository is dirty",
+	Destination: &force,
+	EnvVars:     []string{fmt.Sprintf("%s_FORCE", strings.ToUpper(metadata.Name))},
+	Category:    "Scanning",
+	Hidden:      true,
+}
+
+var dryRun bool
+var dryRunFlag = cli.BoolFlag{
+	Name:        "dry-run",
+	Usage:       "perform a dry run without actually running the scans",
+	Destination: &dryRun,
+	EnvVars:     []string{fmt.Sprintf("%s_DRYRUN", strings.ToUpper(metadata.Name))},
+	Category:    "Scanning",
+}
+
+var verbose bool
+var verboseFlag = cli.BoolFlag{
+	Name:        "verbose",
+	Aliases:     []string{"v"},
+	Usage:       "show verbose output",
+	Destination: &verbose,
+	EnvVars:     []string{fmt.Sprintf("%s_VERBOSE", strings.ToUpper(metadata.Name))},
+	Category:    "Info",
+}
+
+var severity string
+var severityFlag = cli.StringFlag{
+	Name:        "severity",
+	Aliases:     []string{"s"},
+	Usage:       "fail check if any defects or vulnerabilities meets or exceeds the specified severity",
+	Value:       defaultSeverity,
+	Destination: &severity,
+	EnvVars:     []string{fmt.Sprintf("%s_SEVERITY", strings.ToUpper(metadata.Name))},
+	Category:    "Scanning",
+}
+
+var ignore string
+var ignoreFlag = cli.StringFlag{
+	Name:        "ignore",
+	Aliases:     []string{"i"},
+	Destination: &ignore,
+	Usage:       "ignore defects or vulnerabilities with any of the specified fix states",
+	EnvVars:     []string{fmt.Sprintf("%s_IGNOREFIXSTATES", strings.ToUpper(metadata.Name))},
+	Category:    "Scanning",
+}
+
+var pipeline bool
+var pipelineFlag = cli.BoolFlag{
+	Name:        "pipeline",
+	Aliases:     []string{"p"},
+	Usage:       "run in pipeline mode",
+	Destination: &pipeline,
+	EnvVars:     []string{fmt.Sprintf("%s_PIPELINE", strings.ToUpper(metadata.Name))},
+	Category:    "Reporting",
+}
+
+var gitRepo string
+var gitRepoFlag = cli.StringFlag{
+	Name:        "git-repo",
+	Usage:       "id of git repository containing application being scanned",
+	Destination: &gitRepo,
+	EnvVars:     []string{fmt.Sprintf("%s_GITREPO", strings.ToUpper(metadata.Name))},
+	Category:    "Reporting",
+}
+
+var buildId string
+var buildIdFlag = cli.StringFlag{
+	Name:        "build-id",
+	Usage:       "build id of git repository pipeline of application being scanned",
+	Destination: &buildId,
+	EnvVars:     []string{fmt.Sprintf("%s_BUILDID", strings.ToUpper(metadata.Name))},
+	Category:    "Reporting",
+}
+
+var cacheDir string
+var cacheDirFlag = cli.StringFlag{
+	Name:        "cache-dir",
+	Usage:       "cache directory for S3 uploads in pipeline mode",
+	Destination: &cacheDir,
+	Value:       defaultCacheDir,
+	EnvVars:     []string{fmt.Sprintf("%s_CACHEDIR", strings.ToUpper(metadata.Name))},
+	Category:    "Reporting",
+}
+
+var s3Bucket string
+var s3BucketFlag = cli.StringFlag{
+	Name:        "s3-bucket",
+	Usage:       "bucket to upload scan results to",
+	Destination: &s3Bucket,
+	EnvVars:     []string{fmt.Sprintf("%s_S3BUCKET", strings.ToUpper(metadata.Name))},
+	Category:    "Reporting",
+}
+
+var s3KeyPrefix string
+var s3KeyPrefixFlag = cli.StringFlag{
+	Name:        "s3-key-prefix",
+	Usage:       "key prefix to upload scan results to",
+	Destination: &s3KeyPrefix,
+	Value:       metadata.Name,
+	EnvVars:     []string{fmt.Sprintf("%s_S3KEYPREFIX", strings.ToUpper(metadata.Name))},
+	Category:    "Reporting",
+}
+
+var disabled bool
+var disabledFlag = cli.BoolFlag{
+	Name:        "disable",
+	Usage:       "disable application processing",
+	Destination: &disabled,
+	EnvVars:     []string{fmt.Sprintf("%s_DISABLED", strings.ToUpper(metadata.Name))},
+	Category:    "Scanning",
+	Hidden:      true,
+}
+
+// ----------------------------------------------------------------------------
+// CLI application
+// ----------------------------------------------------------------------------
+
+// New creates a new cli application.
+func New() *cli.App {
+	return &cli.App{
+		Name:                 metadata.Name,
+		EnableBashCompletion: true,
+		Commands: []*cli.Command{
+			{
+				Name:  "init",
+				Usage: "Initializes imagecheck configuration in current directory",
+				Action: func(c *cli.Context) error {
+					if c.NArg() > 0 {
+						return fmt.Errorf("too many arguments")
+					}
+
+					settings := app.NewSettings(metadata.Username, metadata.Hostname, metadata.Version)
+					path := defaultConfigFile
+					if err := app.SaveSettings(settings, path); err != nil {
+						return err
+					}
+					fmt.Printf("created %s\n", path)
+					return nil
+				},
+			},
+			{
+				Name:  "version",
+				Usage: "Shows application version",
+				Action: func(c *cli.Context) error {
+					fmt.Println(metadata.Version)
+					return nil
+				},
+			},
+			{
+				Name:  "buildinfo",
+				Usage: "Shows application build information",
+				Action: func(c *cli.Context) error {
+					tbl := getBuildInfoTable()
+					tbl.Print()
+					return nil
+				},
+			},
+			{
+				Name:  "scanners",
+				Usage: "Shows scanner tools information",
+				Action: func(c *cli.Context) error {
+					tbl := getScanToolsTable()
+					tbl.Print()
+					return nil
+				},
+			},
+			{
+				Name:  "scan",
+				Usage: "Checks image for defects and vulnerabilities",
+				Description: `This command checks a container image and all associated source code and
 configuration artifacts for defects and vulnerabilities. It is intended to be
 used in a CI/CD pipeline to ensure that images are safe to deploy, but is also
 useful for scanning changes by developers during local development workflows.
@@ -65,367 +258,140 @@ pipeline mode, provide the following additional options:
 * --build-id       The Git repository pipeline build id of the application being scanned
 
 When run in pipeline mode, the app requires AWS IAM permissions to upload scans
-output and summaries to bucket configured for use.`
+output and summaries to bucket configured for use.`,
+				Flags: []cli.Flag{
+					&configFileFlag,
+					&forceFlag,
+					&disabledFlag,
+					&dryRunFlag,
+					&verboseFlag,
+					&severityFlag,
+					&ignoreFlag,
+					&pipelineFlag,
+					&gitRepoFlag,
+					&buildIdFlag,
+					&cacheDirFlag,
+					&s3BucketFlag,
+					&s3KeyPrefixFlag,
+				},
+				Action: func(c *cli.Context) error {
+					// Ensure application is not disabled, show the application build info,
+					// config info, scanner tools info, and version info as needed and exit.
+					if disabled {
+						fmt.Println("exiting disabled application")
+						return nil
+					}
 
-// ----------------------------------------------------------------------------
-// CLI application "constants"
-// ----------------------------------------------------------------------------
+					// Ensure a single argument is provided, at most, and set the image to that argument.
+					if c.NArg() > 1 {
+						return fmt.Errorf("too many image arguments")
+					}
+					var image string
+					if c.NArg() == 1 {
+						image = c.Args().First()
+					}
 
-func init() {
-	var err error
-	if buildInfo, err = getBuildInfo(); err != nil {
-		panic(err)
-	}
-}
+					// Ensure that ignored fix states are valid.
+					for _, ignoreFixState := range strings.Split(ignore, ",") {
+						if ignoreFixState != "" && !isValidIgnoreFixState(ignoreFixState) {
+							return fmt.Errorf("invalid ignore state: %s. Chose one of %s", ignoreFixState, strings.Join(validIgnoreFixStates, ", "))
+						}
+					}
 
-var buildInfo BuildInfo
+					// Ensure that if --s3-bucket option is provided, so are --git-repo and --build-id options.
+					if s3Bucket != "" && (gitRepo == "" || buildId == "") {
+						return fmt.Errorf("--git-repo and --build-id required in pipeline mode")
+					}
 
-var defaultCacheDir = fmt.Sprintf("~/.cache/%s", app.Name)
+					// Ensure that if we're running in pipeline mode, the repo is not in a dirty state (unless forced).
+					if pipeline && metadata.Build.Dirty && !force {
+						return fmt.Errorf("dirty git repository not allowed in pipeline mode")
+					}
 
-const defaultSeverity = "medium"
+					// Normalize the --severity option value to lowercase and ensure it's valid.
+					severity = strings.ToLower(severity)
+					if !isValidSeverity(severity) {
+						return fmt.Errorf("invalid severity: %s. Chose one of %s", severity, strings.Join(validSeverities, ", "))
+					}
 
-var validSeverities = []string{"critical", "high", "medium", "low"}
+					// Ensure required scan tools are available in PATH.
+					for name := range app.ScanTools {
+						if path, _ := exec.LookPath(name); path == "" {
+							return fmt.Errorf("missing scanner: %s", name)
+						}
+					}
 
-var validIgnoreFixStates = []string{"fixed", "not-fixed", "wont-fix", "unknown"}
+					// Print application details if necessary.
+					if verbose || pipeline {
+						var pipelineMode string
+						if pipeline {
+							pipelineMode = "(pipeline mode)"
+						}
+						fmt.Printf("%s %s %s\n\n", metadata.Name, metadata.Version, pipelineMode)
 
-// ----------------------------------------------------------------------------
-// CLI application flags
-// ----------------------------------------------------------------------------
+						fmt.Println("BUILD")
+						tbl := getBuildInfoTable()
+						tbl.Print()
+						fmt.Println()
 
-var cfg struct {
-	DryRun          bool   `json:"dryRun"`
-	Force           bool   `json:"force"`
-	Verbose         bool   `json:"verbose"`
-	Severity        string `json:"severity"`
-	IgnoreFixStates string `json:"ignoreFixStates"`
-	Pipeline        bool   `json:"pipeline"`
-	GitRepo         string `json:"gitRepo"`
-	BuildId         string `json:"buildId"`
-	CacheDir        string `json:"cacheDir"`
-	S3Bucket        string `json:"s3Bucket"`
-	S3KeyPrefix     string `json:"s3KeyPrefix"`
-}
+						fmt.Println("CONFIG")
+						tbl = getConfigTable()
+						tbl.Print()
+						fmt.Println()
 
-var dryRunFlag = cli.BoolFlag{
-	Name:        "dry-run",
-	Usage:       "perform a dry run without actually running the scans",
-	Destination: &cfg.DryRun,
-	EnvVars:     []string{fmt.Sprintf("%s_DRYRUN", strings.ToUpper(app.Name))},
-	Category:    "Scanning",
-}
-var forceFlag = cli.BoolFlag{
-	Name:        "force",
-	Aliases:     []string{"f"},
-	Usage:       "force reporting action, if needed",
-	Destination: &cfg.Force,
-	EnvVars:     []string{fmt.Sprintf("%s_FORCE", strings.ToUpper(app.Name))},
-	Category:    "Reporting",
-}
+						fmt.Println("SCANNERS")
+						tbl = getScanToolsTable()
+						tbl.Print()
+						fmt.Println()
+					}
 
-var verboseFlag = cli.BoolFlag{
-	Name:        "verbose",
-	Aliases:     []string{"v"},
-	Usage:       "show verbose output",
-	Destination: &cfg.Verbose,
-	EnvVars:     []string{fmt.Sprintf("%s_VERBOSE", strings.ToUpper(app.Name))},
-	Category:    "Info",
-}
+					// Get the start time timestamp, create a scan runner, and run the scans.
+					if verbose || pipeline {
+						fmt.Println("Running scans ...")
+					}
+					runner := app.NewScanRunner(app.ScanRunnerConfig{
+						Severity:        severity,
+						IgnoreFixStates: ignore,
+						PipelineMode:    pipeline,
+						Verbose:         verbose,
+						DryRun:          dryRun,
+					})
+					beginTime := time.Now()
+					scans := runner.Scan(image)
 
-var severityFlag = cli.StringFlag{
-	Name:        "severity",
-	Aliases:     []string{"s"},
-	Usage:       "fail check if any defects or vulnerabilities meets or exceeds the specified severity",
-	Value:       defaultSeverity,
-	Destination: &cfg.Severity,
-	EnvVars:     []string{fmt.Sprintf("%s_SEVERITY", strings.ToUpper(app.Name))},
-	Category:    "Scanning",
-}
+					// We're done if we're not running in pipeline mode or if running in dry run mode.
+					if !pipeline || dryRun {
+						return nil
+					}
 
-var ignoreFixStatesFlag = cli.StringFlag{
-	Name:        "ignore",
-	Aliases:     []string{"i"},
-	Destination: &cfg.IgnoreFixStates,
-	Usage:       "ignore defects or vulnerabilities with any of the specified fix states",
-	EnvVars:     []string{fmt.Sprintf("%s_IGNOREFIXSTATES", strings.ToUpper(app.Name))},
-	Category:    "Scanning",
-}
+					// Otherwise, continue pipeline mode processing by printing a table of scan results.
+					fmt.Println("\nRESULTS")
+					tbl := getScansTable(scans)
+					tbl.Print()
+					fmt.Println()
 
-var pipelineFlag = cli.BoolFlag{
-	Name:        "pipeline",
-	Aliases:     []string{"p"},
-	Usage:       "run in pipeline mode",
-	Destination: &cfg.Pipeline,
-	EnvVars:     []string{fmt.Sprintf("%s_PIPELINE", strings.ToUpper(app.Name))},
-	Category:    "Reporting",
-}
+					// Create a new scan reporter and report the scans.
+					reporter := app.NewScanReporter(app.ScanReporterConfig{
+						CacheDir:    cacheDir,
+						Verbose:     verbose,
+						GitRepo:     gitRepo,
+						BuildId:     buildId,
+						S3Bucket:    s3Bucket,
+						S3KeyPrefix: s3KeyPrefix,
+					})
+					if err := reporter.Report(scans, beginTime); err != nil {
+						return err
+					}
 
-var gitRepoFlag = cli.StringFlag{
-	Name:        "git-repo",
-	Usage:       "id of git repository containing application being scanned",
-	Destination: &cfg.GitRepo,
-	EnvVars:     []string{fmt.Sprintf("%s_GITREPO", strings.ToUpper(app.Name))},
-	Category:    "Reporting",
-}
-
-var buildIdFlag = cli.StringFlag{
-	Name:        "build-id",
-	Usage:       "build id of git repository pipeline of application being scanned",
-	Destination: &cfg.BuildId,
-	EnvVars:     []string{fmt.Sprintf("%s_BUILDID", strings.ToUpper(app.Name))},
-	Category:    "Reporting",
-}
-
-var cacheDirFlag = cli.StringFlag{
-	Name:        "cache-dir",
-	Usage:       "cache directory for S3 uploads in pipeline mode",
-	Destination: &cfg.CacheDir,
-	Value:       defaultCacheDir,
-	EnvVars:     []string{fmt.Sprintf("%s_CACHEDIR", strings.ToUpper(app.Name))},
-	Category:    "Reporting",
-}
-
-var s3BucketFlag = cli.StringFlag{
-	Name:        "s3-bucket",
-	Usage:       "bucket to upload scan results to",
-	Destination: &cfg.S3Bucket,
-	EnvVars:     []string{fmt.Sprintf("%s_S3BUCKET", strings.ToUpper(app.Name))},
-	Category:    "Reporting",
-}
-
-var s3KeyPrefixFlag = cli.StringFlag{
-	Name:        "s3-key-prefix",
-	Usage:       "key prefix to upload scan results to",
-	Destination: &cfg.S3KeyPrefix,
-	Value:       app.Name,
-	EnvVars:     []string{fmt.Sprintf("%s_S3KEYPREFIX", strings.ToUpper(app.Name))},
-	Category:    "Reporting",
-}
-
-var disabled bool
-var disabledFlag = cli.BoolFlag{
-	Name:        "disable",
-	Usage:       "disable application processing",
-	Destination: &disabled,
-	EnvVars:     []string{fmt.Sprintf("%s_DISABLED", strings.ToUpper(app.Name))},
-	Category:    "General",
-	Hidden:      true,
-}
-
-var showConfig bool
-var showConfigFlag = cli.BoolFlag{
-	Name:        "config",
-	Usage:       "show application configuration and exit",
-	Destination: &showConfig,
-	Category:    "Info",
-	Hidden:      true,
-}
-
-var showBuildInfo bool
-var showBuildInfoFlag = cli.BoolFlag{
-	Name:        "buildinfo",
-	Usage:       "show application build information and exit",
-	Destination: &showBuildInfo,
-	Category:    "Info",
-	Hidden:      true,
-}
-
-var showScanners bool
-var showScannersFlag = cli.BoolFlag{
-	Name:        "scanners",
-	Usage:       "show application scanners and exit",
-	Destination: &showScanners,
-	Category:    "Info",
-	Hidden:      true,
-}
-
-var showVersion bool
-var showVersionFlag = cli.BoolFlag{
-	Name:        "version",
-	Usage:       "show application version and exit",
-	Destination: &showVersion,
-	Category:    "Info",
-	Hidden:      true,
-}
-
-// ----------------------------------------------------------------------------
-// CLI application
-// ----------------------------------------------------------------------------
-
-// New creates a new cli application.
-func New() *cli.App {
-	return &cli.App{
-		Name:                 app.Name,
-		Usage:                usage,
-		Description:          description,
-		EnableBashCompletion: true,
-		Flags: []cli.Flag{
-			&disabledFlag,
-			&dryRunFlag,
-			&forceFlag,
-			&verboseFlag,
-			&severityFlag,
-			&ignoreFixStatesFlag,
-			&pipelineFlag,
-			&gitRepoFlag,
-			&buildIdFlag,
-			&cacheDirFlag,
-			&s3BucketFlag,
-			&s3KeyPrefixFlag,
-			&showBuildInfoFlag,
-			&showConfigFlag,
-			&showScannersFlag,
-			&showVersionFlag,
-		},
-		Action: func(c *cli.Context) error {
-			// Ensure application is not disabled, show the application build info,
-			// config info, scanner tools info, and version info as needed and exit.
-			if disabled {
-				fmt.Println("exiting disabled application")
-				return nil
-			}
-
-			// Show the application build, config, scanners, and version info as needed and exit.
-			if showBuildInfo {
-				tbl := getBuildInfoTable()
-				tbl.Print()
-				return nil
-			}
-			if showConfig {
-				tbl := getConfigTable()
-				tbl.Print()
-				return nil
-			}
-			if showScanners {
-				tbl := getScanToolsTable()
-				tbl.Print()
-				return nil
-			}
-			if showVersion {
-				fmt.Println(app.Version)
-				return nil
-			}
-
-			// Ensure a single argument is provided, at most, and set the image to that argument.
-			if c.NArg() > 1 {
-				return fmt.Errorf("too many image arguments")
-			}
-			var image string
-			if c.NArg() == 1 {
-				image = c.Args().First()
-			}
-
-			// Ensure that ignored fix states are valid.
-			for _, ignoreFixState := range strings.Split(cfg.IgnoreFixStates, ",") {
-				if ignoreFixState != "" && !isValidIgnoreFixState(ignoreFixState) {
-					return fmt.Errorf("invalid ignore state: %s. Chose one of %s", ignoreFixState, strings.Join(validIgnoreFixStates, ", "))
-				}
-			}
-
-			// Ensure that if --s3-bucket option is provided, so are --git-repo and --build-id options.
-			if cfg.S3Bucket != "" && (cfg.GitRepo == "" || cfg.BuildId == "") {
-				return fmt.Errorf("--git-repo and --build-id required in pipeline mode")
-			}
-
-			// Ensure that if we're running in pipeline mode, the repo is not in a dirty state (unless forced).
-			if cfg.Pipeline && buildInfo.Dirty && !cfg.Force {
-				return fmt.Errorf("dirty git repository not allowed in pipeline mode")
-			}
-
-			// Normalize the --severity option value to lowercase and ensure it's valid.
-			cfg.Severity = strings.ToLower(cfg.Severity)
-			if !isValidSeverity(cfg.Severity) {
-				return fmt.Errorf("invalid severity: %s. Chose one of %s", cfg.Severity, strings.Join(validSeverities, ", "))
-			}
-
-			// Normalize the --cache-dir option to absolute path, expanding the home directory if necessary.
-			if strings.HasPrefix(cfg.CacheDir, "~/") {
-				homeDir, err := os.UserHomeDir()
-				if err != nil {
-					return err
-				}
-				cacheDir := strings.TrimPrefix(cfg.CacheDir, "~/")
-				cfg.CacheDir = filepath.Join(homeDir, cacheDir)
-			} else {
-				cfg.CacheDir, _ = filepath.Abs(cfg.CacheDir)
-			}
-
-			// Ensure required scan tools are available in PATH.
-			for name := range app.ScanTools {
-				if path, _ := exec.LookPath(name); path == "" {
-					return fmt.Errorf("missing scanner: %s", name)
-				}
-			}
-
-			// Print application details if necessary.
-			if cfg.Verbose || cfg.Pipeline {
-				var pipelineMode string
-				if cfg.Pipeline {
-					pipelineMode = "(pipeline mode)"
-				}
-				fmt.Printf("%s %s %s\n\n", app.Name, app.Version, pipelineMode)
-
-				fmt.Println("BUILD")
-				tbl := getBuildInfoTable()
-				tbl.Print()
-				fmt.Println()
-
-				fmt.Println("CONFIG")
-				tbl = getConfigTable()
-				tbl.Print()
-				fmt.Println()
-
-				fmt.Println("SCANNERS")
-				tbl = getScanToolsTable()
-				tbl.Print()
-				fmt.Println()
-			}
-
-			// Get the start time timestamp, create a scan runner, and run the scans.
-			if cfg.Verbose || cfg.Pipeline {
-				fmt.Println("Running scans ...")
-			}
-			runner := app.NewScanRunner(app.ScanRunnerConfig{
-				Severity:        cfg.Severity,
-				IgnoreFixStates: cfg.IgnoreFixStates,
-				PipelineMode:    cfg.Pipeline,
-				Verbose:         cfg.Verbose,
-				DryRun:          cfg.DryRun,
-			})
-			beginTime := time.Now()
-			scans := runner.Scan(image)
-
-			// We're done if we're not running in pipeline mode or if running in dry run mode.
-			if !cfg.Pipeline || cfg.DryRun {
-				return nil
-			}
-
-			// Otherwise, continue pipeline mode processing by printing a table of scan results.
-			fmt.Println("\nRESULTS")
-			tbl := getScansTable(scans)
-			tbl.Print()
-			fmt.Println()
-
-			// Create a new scan reporter and report the scans.
-			reporter := app.NewScanReporter(app.ScanReporterConfig{
-				CacheDir:    cfg.CacheDir,
-				Force:       cfg.Force,
-				Verbose:     cfg.Verbose,
-				GitRepo:     cfg.GitRepo,
-				BuildId:     cfg.BuildId,
-				S3Bucket:    cfg.S3Bucket,
-				S3KeyPrefix: cfg.S3KeyPrefix,
-			})
-			if err := reporter.Report(scans, beginTime); err != nil {
-				return err
-			}
-
-			// We're done, but first check to see if any defects or vulnerabilities
-			// meet or exceed the severity specified in the fail flag.
-			if checkFailed(scans, cfg.Severity) {
-				return fmt.Errorf("%s severity %s threshold met or exceeded", app.Name, cfg.Severity)
-			}
-			fmt.Printf("\n%s succeeded.\n", app.Name)
-			return nil
+					// We're done, but first check to see if any defects or vulnerabilities
+					// meet or exceed the severity specified in the fail flag.
+					if checkFailed(scans, severity) {
+						return fmt.Errorf("%s severity %s threshold met or exceeded", metadata.Name, severity)
+					}
+					fmt.Printf("\n%s succeeded.\n", metadata.Name)
+					return nil
+				},
+			},
 		},
 	}
 }
@@ -451,34 +417,6 @@ func isValidIgnoreFixState(ignoreState string) bool {
 	return slices.Contains(validIgnoreFixStates, ignoreState)
 }
 
-// BuildInfo represents the build information for the application.
-type BuildInfo struct {
-	Version   string `json:"version"`
-	Commit    string `json:"commit"`
-	Dirty     bool   `json:"dirty"`
-	Timestamp string `json:"timestamp"`
-}
-
-// getBuildInfo returns the build information for the application.
-func getBuildInfo() (BuildInfo, error) {
-	buildInfo := BuildInfo{Version: app.Version}
-	if info, ok := debug.ReadBuildInfo(); ok {
-		for _, setting := range info.Settings {
-			switch setting.Key {
-			case "vcs.modified":
-				dirty, _ := strconv.ParseBool(setting.Value)
-				buildInfo.Dirty = dirty
-			case "vcs.revision":
-				buildInfo.Commit = setting.Value
-			case "vcs.time":
-				buildInfo.Timestamp = setting.Value
-			}
-		}
-		return buildInfo, nil
-	}
-	return buildInfo, fmt.Errorf("failed to read build information")
-}
-
 // ----------------------------------------------------------------------------
 // Pretty tables support
 // ----------------------------------------------------------------------------
@@ -489,27 +427,25 @@ var columnFmt = color.New(color.FgYellow).SprintfFunc()
 func getBuildInfoTable() table.Table {
 	tbl := table.New("Name", "Value")
 	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
-	tbl.AddRow("Version", buildInfo.Version)
-	tbl.AddRow("Commit", buildInfo.Commit)
-	tbl.AddRow("Timestamp", buildInfo.Timestamp)
-	tbl.AddRow("Dirty", buildInfo.Dirty)
+	tbl.AddRow("Commit", metadata.Build.Commit)
+	tbl.AddRow("Timestamp", metadata.Build.Timestamp)
+	tbl.AddRow("Dirty", metadata.Build.Dirty)
 	return tbl
 }
 
 func getConfigTable() table.Table {
 	tbl := table.New("Name", "Value")
 	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
-	tbl.AddRow("Dry Run", cfg.DryRun)
-	tbl.AddRow("Force", cfg.Force)
-	tbl.AddRow("Verbose", cfg.Verbose)
-	tbl.AddRow("Severity", cfg.Severity)
-	tbl.AddRow("Ignore Fix States", cfg.IgnoreFixStates)
-	tbl.AddRow("Pipeline", cfg.Pipeline)
-	tbl.AddRow("Git Repo", cfg.GitRepo)
-	tbl.AddRow("Build Id", cfg.BuildId)
-	tbl.AddRow("Cache Dir", cfg.CacheDir)
-	tbl.AddRow("S3 Bucket", cfg.S3Bucket)
-	tbl.AddRow("S3 Key Prefix", cfg.S3KeyPrefix)
+	tbl.AddRow("Dry Run", dryRun)
+	tbl.AddRow("Verbose", verbose)
+	tbl.AddRow("Severity", severity)
+	tbl.AddRow("Ignore ", ignore)
+	tbl.AddRow("Pipeline", pipeline)
+	tbl.AddRow("Git Repo", gitRepo)
+	tbl.AddRow("Build Id", buildId)
+	tbl.AddRow("Cache Dir", cacheDir)
+	tbl.AddRow("S3 Bucket", s3Bucket)
+	tbl.AddRow("S3 Key Prefix", s3KeyPrefix)
 	return tbl
 }
 

@@ -15,14 +15,24 @@ upstream remotes.
 
 There are several ways to install the `imagecheck` application for use:
 
-1. [`install.sh`](#use-installsh-script) in its remote repository
-2. [`go install`](#use-go-install) on its remote repository
-3. [`go build`](#use-go-build) in its locally cloned repository
-4. [`docker pull`](#use-docker-pull) on its pushed container image
+1. [`install.sh`](#installsh-script) script
+2. [`go install`](#go-install) command
+3. [`go build`](#go-build) command
+4. [`docker pull`](#docker-pull) command
 
-### Dependencies
+### Scanner dependencies
 
-All scanners are required to be installed on the system.
+Scanners are required to be installed on the system. The scanners used by
+`imagecheck` are:
+
+* [grype](https://github.com/anchore/grype)
+* [trivy](https://https://github.com/aquasecurity/trivy)
+* [trufflehog](https://github.com/trufflesecurity/trufflehog)
+
+Note that if using the `imagecheck` image, the scanners are already installed
+in that image and in its `$PATH`.
+
+#### Install dependencies with brew
 
 On macOS and Linux, they can be installed using [Homebrew](https://brew.sh):
 
@@ -41,6 +51,8 @@ BREW_BIN=$(brew --prefix)/bin
 export PATH=$BREW_BIN:$PATH
 ```
 
+#### Install dependencies with install.sh script
+
 On both Linux and macOS you can also install the scanners from their GitHub
 releases using their `install.sh` scripts:
 
@@ -50,10 +62,7 @@ curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/ins
 curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b $HOME/bin
 ```
 
-Note that if running the docker image, the scanners are already installed
-and available in the container.
-
-### Use install.sh script
+### install.sh script
 
 You can install the application from its GitHub releases using the `install.sh` script:
 
@@ -64,7 +73,7 @@ curl -sSfL https://raw.githubusercontent.com/sambatv/imagecheck/main/install.sh 
 After installation, the `imagecheck` binary will be available in your
 `$HOME/bin` directory.
 
-### Use go install
+### go install
 
 The `imagecheck` binary can be installed using the `go` toolchain:
 
@@ -75,7 +84,7 @@ GOBIN=~/bin go install github.com/sambatv/imagecheck@latest
 After installation, the `imagecheck` binary will be available in your
 `$HOME/bin` directory.
 
-### Use go build
+### go build
 
 You can also build the application locally:
 
@@ -88,7 +97,7 @@ make build
 After building, the `imagecheck` binary will be available in the repository
 root directory.
 
-### Use docker pull
+### docker pull
 
 The `imagecheck` docker image can be pulled from the `ghci.io` registry:
 
@@ -97,11 +106,6 @@ docker pull ghcr.io/sambatv/imagecheck:latest
 ```
 
 After pulling, the `imagecheck` binary can be run from the docker image.
-
-```shell
-docker run -it --rm ghcr.io/sambatv/imagecheck:latest --help 
-```
-
 The `imagecheck` binary is the entrypoint for the container image.
 
 Note that the docker image contains the `imagecheck` binary and the binaries
@@ -111,7 +115,7 @@ For convenience, you may wish to create a shell alias for the `docker run`
 command:
 
 ```shell
-alias imagecheck='docker run -it --rm ghcr.io/sambatv/imagecheck:latest'
+alias imagecheck='docker run -it -v $(pwd):/app --rm ghcr.io/sambatv/imagecheck:latest'
 ```
 
 ## Usage
@@ -126,30 +130,29 @@ imagecheck --help
 ### Initialization
 
 The `imagecheck init` command should be run first in your git repository root
-directory to create a `.imagecheck.json` configuration file in it:
+directory to create a `.imagecheck.json` settings file in it:
 
 ```shell
 imagecheck init
 ```
 
+This settings file should be committed to the repository and is automatically
+detected when present. Multiple settings files can be created for different
+environments and branches, and can be selected for use with the `--settings`
+option.
+
 ### Scanning
 
-The `imagecheck scan` command drives the following open-source scanners:
+When run with no image argument, `imagecheck scan` performs:
 
-* [grype](https://github.com/anchore/grype)
-* [trivy](https://https://github.com/aquasecurity/trivy)
-* [trufflehog](https://github.com/trufflesecurity/trufflehog)
+* a `grype` scan of the repository filesystem
+* a `trivy` scan of the repository filesystem and config, including the Dockerfile
+* a `trufflehog` scan of the repository filesystem
 
-When run with no arguments, it performs the following checks:
+If an image argument is provided, it additionally performs:
 
-* A `grype` scan of the repository filesystem
-* A `trivy` scan of the repository filesystem and config, including the Dockerfile
-* A `trufflehog` scan of the repository filesystem
-
-If an image argument is provided, it performs the following additional checks:
-
-* A `grype` scan of the built image
-* A `trufflehog` scan of the built image
+* a `grype` scan of the built image
+* a `trufflehog` scan of the built image
 
 ```shell
 imagecheck scan $IMAGE
@@ -165,8 +168,7 @@ following options, after an image has been built and before it is pushed to
 its image registry:
 
 ```shell
-imagecheck scan \
-  --pipeline \
+imagecheck scan --pipeline \
   --s3-bucket $S3_BUCKET \
   --s3-key-prefix $S3_KEY_PREFIX \
   --git-repo $REPO_NAME \
@@ -189,24 +191,9 @@ bucket, under the `--s3-key-prefix` option.
 S3_KEY_PREFIX/
   REPO_NAME/
     BUILD_ID/
-      report.json
-      sbom.json
-      scans/
-        grype/
-          files.json
-          IMAGE.json
-        trivy/
-          config.json
-          files.json
-        trufflehog/
-          files.json
-          IMAGE.json
+      ...
 ```
 
-Where:
-
-* `REPO_NAME` is the git repository name (e.g. `github.com/sambatv/imagecheck`) specified with the `--git-repo` option
-* `BUILD_ID` is the unique git build pipeline id specified with the `--build-id` option
-* `IMAGE` is the image passed as argument to the `scan` command
-
-Note that multiple images may be built from a single repository and its pipeline.
+Note that multiple images may be built from a single repository and its
+pipeline. All images should be scanned in the build pipeline with `imagecheck`
+before being pushed to their image registry repositories.

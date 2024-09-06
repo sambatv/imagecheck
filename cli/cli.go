@@ -18,9 +18,9 @@ import (
 )
 
 const (
-	defaultCacheDir   = "cache"
-	defaultConfigFile = ".imagecheck.json"
-	defaultSeverity   = "medium"
+	defaultCacheDir     = "cache"
+	defaultSettingsFile = ".imagecheck.json"
+	defaultSeverity     = "medium"
 )
 
 var (
@@ -32,12 +32,12 @@ var (
 // CLI application flags
 // ----------------------------------------------------------------------------
 
-var configFile string
-var configFileFlag = cli.StringFlag{
-	Name:        "config-file",
-	Usage:       "path to configuration file",
-	Value:       defaultConfigFile,
-	Destination: &configFile,
+var settingsFile string
+var settingsFileFlag = cli.StringFlag{
+	Name:        "settings",
+	Usage:       "path to settings file",
+	Value:       defaultSettingsFile,
+	Destination: &settingsFile,
 	EnvVars:     []string{fmt.Sprintf("%s_CONFIGFILE", strings.ToUpper(metadata.Name))},
 	Category:    "Scanning",
 }
@@ -162,9 +162,9 @@ func New() *cli.App {
 		Commands: []*cli.Command{
 			{
 				Name:  "init",
-				Usage: "Initializes imagecheck configuration in current directory",
+				Usage: "Initializes imagecheck settings in current directory",
 				Flags: []cli.Flag{
-					&configFileFlag,
+					&settingsFileFlag,
 					&severityFlag,
 					&ignoreFlag,
 				},
@@ -172,15 +172,15 @@ func New() *cli.App {
 					if c.NArg() > 0 {
 						return fmt.Errorf("too many arguments")
 					}
-					if fileExists(configFile) {
-						return fmt.Errorf("settings file exists: %s", configFile)
+					if fileExists(settingsFile) {
+						return fmt.Errorf("settings file exists: %s", settingsFile)
 					}
 
 					settings := app.NewSettings(metadata.Version, severity, ignore.Value())
-					if err := app.SaveSettings(settings, configFile); err != nil {
+					if err := app.SaveSettings(settings, settingsFile); err != nil {
 						return err
 					}
-					fmt.Printf("initialized %s settings in %s\n", metadata.Name, defaultConfigFile)
+					fmt.Printf("initialized %s settings in %s\n", metadata.Name, defaultSettingsFile)
 					return nil
 				},
 			},
@@ -260,7 +260,7 @@ pipeline mode, provide the following additional options:
 When run in pipeline mode, the app requires AWS IAM permissions to upload scans
 output and summaries to bucket configured for use.`,
 				Flags: []cli.Flag{
-					&configFileFlag,
+					&settingsFileFlag,
 					&forceFlag,
 					&dryRunFlag,
 					&verboseFlag,
@@ -279,8 +279,8 @@ output and summaries to bucket configured for use.`,
 					// Load the scan settings from the settings file if it exists or
 					// create a new settings object.
 					var settings *app.ScanSettings
-					if fileExists(configFile) {
-						settings, err = app.LoadSettings(configFile)
+					if fileExists(settingsFile) {
+						settings, err = app.LoadSettings(settingsFile)
 						if err != nil {
 							return err
 						}

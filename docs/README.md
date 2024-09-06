@@ -1,4 +1,4 @@
-# Imagecheck Docs
+# Imagecheck
 
 The `imagecheck` application checks a container image and its associated source
 code and config artifacts for defects and vulnerabilities using multiple

@@ -30,8 +30,8 @@ func NewScanRunner(config ScanRunnerConfig) *ScanRunner {
 
 // Scan runs the scans and returns their results.
 func (r ScanRunner) Scan(image string) []Scan {
-	runScan := func(scanner, scanType, scanTarget string) Scan {
-		return ScanTools[scanner].Scan(scanType, scanTarget, r.cfg.Severity, r.cfg.Ignore, r.cfg.DryRun, r.cfg.PipelineMode)
+	runScan := func(scanTool, scanType, scanTarget string) Scan {
+		return ScanTools[scanTool].Scan(scanType, scanTarget, r.cfg.Severity, r.cfg.Ignore, r.cfg.DryRun, r.cfg.PipelineMode)
 	}
 
 	scans := make([]Scan, 0)

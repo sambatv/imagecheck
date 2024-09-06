@@ -123,9 +123,18 @@ command:
 imagecheck --help
 ```
 
+### Initialization
+
+The `imagecheck init` command should be run first in your git repository root
+directory to create a `.imagecheck.json` configuration file in it:
+
+```shell
+imagecheck init
+```
+
 ### Scanning
 
-The `imagecheck` command drives the following open-source scanners:
+The `imagecheck scan` command drives the following open-source scanners:
 
 * [grype](https://github.com/anchore/grype)
 * [trivy](https://https://github.com/aquasecurity/trivy)
@@ -143,7 +152,7 @@ If an image argument is provided, it performs the following additional checks:
 * A `trufflehog` scan of the built image
 
 ```shell
-imagecheck $IMAGE
+imagecheck scan $IMAGE
 ```
 
 This mode of operation is intended for local development and testing.
@@ -156,9 +165,8 @@ following options, after an image has been built and before it is pushed to
 its image registry:
 
 ```shell
-imagecheck \
+imagecheck scan \
   --pipeline \
-  --cache-dir /app/cache \
   --s3-bucket $S3_BUCKET \
   --s3-key-prefix $S3_KEY_PREFIX \
   --git-repo $REPO_NAME \
@@ -175,7 +183,7 @@ Where:
 * `IMAGE` is the name of the image to scan
 
 If the `--s3-bucket` option is configured, scan results are saved to that S3
-bucket, under the `--s3-key-prefix` option, with the following key hierarchy.
+bucket, under the `--s3-key-prefix` option.
 
 ```text
 S3_KEY_PREFIX/

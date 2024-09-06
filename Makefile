@@ -21,7 +21,7 @@ GIT_TAG = "$(GIT_COMMIT)$(GIT_DIRTY)"
 
 # Set Go compiler and linker flags
 GO_PACKAGE ?= github.com/sambatv/$(APP_NAME)
-GO_LDFLAGS = -ldflags "-X $(GO_PACKAGE)/app.Version=$(APP_VERSION)"
+GO_LDFLAGS = -ldflags "-X $(GO_PACKAGE)/metadata.Version=$(APP_VERSION)"
 
 # Set image registry configuration.
 REGISTRY_HOSTNAME   = ghcr.io

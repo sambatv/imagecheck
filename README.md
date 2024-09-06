@@ -24,6 +24,7 @@ This repository is organized as follows:
 * [`go.mod`](go.mod) - application Go module definition
 * [`go.sum`](go.sum) - application Go module checksums
 * [`Makefile`](Makefile) - project automation for developers
+* [`metadata/`](metadata) - application metadata source code
 * [`README.md`](README.md) - this document
 * [`VERSION`](VERSION) - application version file
 

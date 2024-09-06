@@ -10,11 +10,12 @@ import (
 
 // ScanRunnerConfig represents the configuration for a ScanRunner.
 type ScanRunnerConfig struct {
-	Severity        string
-	IgnoreFixStates string
-	PipelineMode    bool
-	Verbose         bool
-	DryRun          bool
+	DryRun       bool
+	Verbose      bool
+	PipelineMode bool
+	Severity     string
+	Ignore       []string
+	Settings     *ScanSettings
 }
 
 // ScanRunner runs scans.
@@ -28,19 +29,21 @@ func NewScanRunner(config ScanRunnerConfig) *ScanRunner {
 }
 
 // Scan runs the scans and returns their results.
-func (r *ScanRunner) Scan(image string) []Scan {
+func (r ScanRunner) Scan(image string) []Scan {
 	runScan := func(scanner, scanType, scanTarget string) Scan {
-		return ScanTools[scanner].Scan(scanType, scanTarget, r.cfg.Severity, r.cfg.DryRun, r.cfg.PipelineMode)
+		return ScanTools[scanner].Scan(scanType, scanTarget, r.cfg.Severity, r.cfg.Ignore, r.cfg.DryRun, r.cfg.PipelineMode)
 	}
 
 	scans := make([]Scan, 0)
-	scans = append(scans, runScan("grype", "files", currentDir))
-	scans = append(scans, runScan("trivy", "config", currentDir))
-	scans = append(scans, runScan("trivy", "files", currentDir))
-	//scans = append(scans, runScan("trufflehog", "files", currentDir))
-	if image != "" {
-		scans = append(scans, runScan("grype", "image", image))
-		//scans = append(scans, runScan("trufflehog", "image", image))
+	for _, setting := range r.cfg.Settings.Scans {
+		if setting.Disabled {
+			continue
+		}
+		scanTarget := currentDir
+		if setting.ScanType == "image" {
+			scanTarget = image
+		}
+		scans = append(scans, runScan(setting.ScanTool, setting.ScanType, scanTarget))
 	}
 	return scans
 }
@@ -48,7 +51,7 @@ func (r *ScanRunner) Scan(image string) []Scan {
 // ScanTool defines behaviors for a scanner application used to scan a target for a type of defect or vulnerability.
 type ScanTool interface {
 	// Scan scans a target for a type of defect or vulnerability.
-	Scan(scanType, scanTarget, severity string, dryRun, pipelineMode bool) Scan
+	Scan(scanType, scanTarget, severity string, ignore []string, dryRun, pipelineMode bool) Scan
 
 	// Name returns the name of the scanner application.
 	Name() string

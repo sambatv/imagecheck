@@ -27,7 +27,7 @@ func (s TrufflehogScanner) Version() string {
 }
 
 // Scan scans a target for a type of defect or vulnerability with trufflehog.
-func (s TrufflehogScanner) Scan(scanType, scanTarget, severity string, dryRun, pipelineMode bool) Scan {
+func (s TrufflehogScanner) Scan(scanType, scanTarget, severity string, ignore []string, dryRun, pipelineMode bool) Scan {
 	// Set output format to JSON in pipeline mode.
 	var outputOpt string
 	if pipelineMode {

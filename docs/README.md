@@ -78,7 +78,7 @@ After installation, the `imagecheck` binary will be available in your
 The `imagecheck` binary can be installed using the `go` toolchain:
 
 ```shell
-GOBIN=~/bin go install github.com/sambatv/imagecheck@latest
+GOBIN=$HOME/bin go install github.com/sambatv/imagecheck@latest
 ```
 
 After installation, the `imagecheck` binary will be available in your

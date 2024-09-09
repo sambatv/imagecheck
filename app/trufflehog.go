@@ -1,6 +1,7 @@
 package app
 
 import (
+	"encoding/json"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -56,16 +57,41 @@ func (s TrufflehogScanner) run(cmdline, scanType, scanTarget string, dryRun, pip
 		CommandLine:  cmdline,
 		DurationSecs: durationSecs,
 		ExitCode:     exitCode,
-		stdout:       stdout,
+		stdout:       wrapJsonArray(stdout),
 		err:          err,
 	}
 	if err != nil {
+		scan.err = err
 		scan.Error = err.Error()
 	}
 	if dryRun {
 		return scan
 	}
 
-	// TODO: Parse the output to get the number of vulnerabilities.
+	// Parse the JSON output to get the number of vulnerabilities.
+	var data []any
+	if err := json.Unmarshal(scan.stdout, &data); err != nil {
+		scan.err = err
+		scan.Error = err.Error()
+		return scan
+	}
+
+	// Count the number of objects in output. With trufflehog, every object is a
+	// vulnerability, which we will score as a critical vulnerability.
+	scan.NumCritical = len(data)
 	return scan
+}
+
+// wrapJsonArray wraps the given bytes in a JSON array.
+// This is necessary because trufflehog outputs one JSON object per line with
+// no comma delimiters between them, which is not a valid JSON doc.
+func wrapJsonArray(bytes []byte) []byte {
+	s := strings.TrimSpace(string(bytes))
+	lines := strings.Split(s, "\n")
+	if len(lines) == 0 {
+		s = fmt.Sprintf("[%s]", s)
+	} else {
+		s = fmt.Sprintf("[%s]", strings.Join(lines, ","))
+	}
+	return []byte(s)
 }

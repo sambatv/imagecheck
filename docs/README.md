@@ -185,10 +185,10 @@ its image registry:
 
 ```shell
 imagecheck scan --pipeline \
-  --s3-bucket $S3_BUCKET \
-  --s3-key-prefix $S3_KEY_PREFIX \
-  --git-repo $REPO_NAME \
-  --build $BUILD_ID \
+  --s3-bucket $S3_BUCKET \          # required, S3 bucket to save scan results to
+  --s3-key-prefix $S3_KEY_PREFIX \  # optional, defaults to 'imagecheck'
+  --git-repo $REPO_NAME \           # optional, defaults to the git repository name parsed from the git remote URL
+  --build-id $BUILD_ID \            # required, unique identifier of the build pipeline
   $IMAGE 
 ```
 
@@ -203,13 +203,53 @@ Where:
 If the `--s3-bucket` option is configured, scan results are saved to that S3
 bucket, under the `--s3-key-prefix` option.
 
+Before uploading scan results to S3, the scan results are locally cached in
+the configured `--cache-dir` directory. The schema for the cache directory is
+the following for the image built from this repository in its pipeline:
+
 ```text
-S3_KEY_PREFIX/
+CACHE_DIR/
   REPO_NAME/
-    BUILD_ID/
-      ...
+    builds/
+      BUILD_ID/
+        imagecheck.summary.json
+        grype/
+          files/
+            scan.json
+          image/
+            ghcr.io/
+              sambatv/
+                imagecheck:TAG/
+                  scan.json
+        trivy/
+          config/
+             scan.json
+          files/
+             scan.json
+        trufflehog/
+          files/
+            scan.json
+          image/
+            ghcr.io/
+              sambatv/
+                imagecheck:TAG/
+                  scan.json
 ```
 
 Note that multiple images may be built from a single repository and its
 pipeline. All images should be scanned in the build pipeline with `imagecheck`
 before being pushed to their image registry repositories.
+
+When uploading scan results to S3, the scan results are saved in the S3 bucket
+with the following keys schema, directly mapped from the cache directory schema:
+
+```text
+S3_KEY_PREFIX/REPO_NAME/builds/BUILD_ID/imagecheck.summary.json
+S3_KEY_PREFIX/REPO_NAME/builds/BUILD_ID/grype/files/scan.json
+S3_KEY_PREFIX/REPO_NAME/builds/BUILD_ID/grype/image/ghcr.io/sambatv/imagecheck:TAG/scan.json
+S3_KEY_PREFIX/REPO_NAME/builds/BUILD_ID/trivy/config/scan.json
+S3_KEY_PREFIX/REPO_NAME/builds/BUILD_ID/trivy/files/scan.json
+S3_KEY_PREFIX/REPO_NAME/builds/BUILD_ID/trufflehog/files/scan.json
+S3_KEY_PREFIX/REPO_NAME/builds/BUILD_ID/trufflehog/image/ghcr.io/sambatv/imagecheck:TAG/scan.json
+```
+

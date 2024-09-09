@@ -3,17 +3,16 @@ package cli
 
 import (
 	"fmt"
+	"github.com/fatih/color"
+	"github.com/rodaine/table"
+	"github.com/sambatv/imagecheck/app"
+	"github.com/urfave/cli/v2"
 	"os"
 	"os/exec"
 	"slices"
 	"strings"
 	"time"
 
-	"github.com/fatih/color"
-	"github.com/rodaine/table"
-	"github.com/urfave/cli/v2"
-
-	"github.com/sambatv/imagecheck/app"
 	"github.com/sambatv/imagecheck/metadata"
 )
 
@@ -45,7 +44,8 @@ var settingsFileFlag = cli.StringFlag{
 var force bool
 var forceFlag = cli.BoolFlag{
 	Name:        "force",
-	Usage:       "force the scan to run even if the git repository is dirty",
+	Aliases:     []string{"f"},
+	Usage:       "force the scan to run even if the git repository is dirty when in pipeline mode",
 	Destination: &force,
 	EnvVars:     []string{fmt.Sprintf("%s_FORCE", strings.ToUpper(metadata.Name))},
 	Category:    "Scanning",

@@ -82,7 +82,7 @@ func (r ScanReporter) Report(scans []Scan, timestamp time.Time) error {
 }
 
 func (r ScanReporter) CachePath(filename string) string {
-	return path.Join(r.cfg.CacheDir, r.cfg.GitRepo, r.cfg.BuildId, filename)
+	return path.Join(r.cfg.CacheDir, r.cfg.GitRepo, "builds", r.cfg.BuildId, filename)
 }
 
 // CacheScan caches the scan output to a local file.

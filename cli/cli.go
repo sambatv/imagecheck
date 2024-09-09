@@ -34,7 +34,7 @@ var (
 var settingsFile string
 var settingsFileFlag = cli.StringFlag{
 	Name:        "settings",
-	Usage:       "path to settings file",
+	Usage:       "path to scan settings file",
 	Value:       defaultSettingsFile,
 	Destination: &settingsFile,
 	EnvVars:     []string{fmt.Sprintf("%s_SETTINGS", strings.ToUpper(metadata.Name))},

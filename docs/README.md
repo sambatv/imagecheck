@@ -1,7 +1,7 @@
 # Imagecheck
 
-The `imagecheck` application checks a container image and its associated source
-code and config artifacts for defects and vulnerabilities using multiple
+The `imagecheck` application checks a container image, and its associated source
+code and config artifacts, for defects and vulnerabilities using multiple
 scanners, optionally uploading scan summaries and output to an S3 bucket.
 
 It is intended primarily to be used in a CI/CD pipeline after images are built
@@ -34,7 +34,7 @@ in that image and in its `$PATH`.
 
 #### Install dependencies with brew
 
-On macOS and Linux, they can be installed using [Homebrew](https://brew.sh):
+On macOS and Linux, the scanners can be installed using [Homebrew](https://brew.sh):
 
 ```shell
 brew install anchore/grype/grype
@@ -42,8 +42,8 @@ brew install aquasecurity/trivy/trivy
 brew install trufflehog
 ```
 
-After installation, the `grype`, `trivy`, and `trufflehog` binaries will be
-available in your Homebrew `bin` directory. Ensure that this directory is in
+After installation, the `grype`, `trivy`, and `trufflehog` scanner binaries will
+be available in your Homebrew `bin` directory. Ensure that this directory is in
 your `PATH` environment variable.
 
 ```shell
@@ -240,8 +240,9 @@ Note that multiple images may be built from a single repository and its
 pipeline. All images should be scanned in the build pipeline with `imagecheck`
 before being pushed to their image registry repositories.
 
-When uploading scan results to S3, the scan results are saved in the S3 bucket
-with the following keys schema, directly mapped from the cache directory schema:
+When uploading scan results to S3, the scan results are saved in the configured
+--s3-bucket with the following keys schema, directly mapped from the cache
+directory schema:
 
 ```text
 S3_KEY_PREFIX/REPO_NAME/builds/BUILD_ID/imagecheck.summary.json

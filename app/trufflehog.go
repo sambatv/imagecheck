@@ -58,11 +58,10 @@ func (s TrufflehogScanner) run(cmdline, scanType, scanTarget string, dryRun, pip
 		DurationSecs: durationSecs,
 		ExitCode:     exitCode,
 		stdout:       wrapJsonArray(stdout),
-		err:          err,
 	}
 	if err != nil {
-		scan.err = err
 		scan.Error = err.Error()
+		return scan
 	}
 	if dryRun {
 		return scan
@@ -71,7 +70,6 @@ func (s TrufflehogScanner) run(cmdline, scanType, scanTarget string, dryRun, pip
 	// Parse the JSON output to get the number of vulnerabilities.
 	var data []any
 	if err := json.Unmarshal(scan.stdout, &data); err != nil {
-		scan.err = err
 		scan.Error = err.Error()
 		return scan
 	}

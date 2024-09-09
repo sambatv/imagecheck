@@ -75,10 +75,10 @@ func (s TrivyScanner) run(cmdline, scanType, scanTarget string, dryRun, pipeline
 		DurationSecs: durationSecs,
 		ExitCode:     exitCode,
 		stdout:       stdout,
-		err:          err,
 	}
 	if err != nil {
 		scan.Error = err.Error()
+		return scan
 	}
 	if dryRun {
 		return scan

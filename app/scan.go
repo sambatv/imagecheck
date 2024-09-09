@@ -19,7 +19,6 @@ type Scan struct {
 	NumLow        int     `json:"numLow"`
 	NumNegligible int     `json:"numNegligible"`
 	NumUnknown    int     `json:"numUnknown"`
-	err           error
 	stdout        []byte
 }
 

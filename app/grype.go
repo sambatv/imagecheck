@@ -60,10 +60,10 @@ func (s GrypeScanner) run(cmdline, scanType, scanTarget string, dryRun, pipeline
 		DurationSecs: durationSecs,
 		ExitCode:     exitCode,
 		stdout:       stdout,
-		err:          err,
 	}
 	if err != nil {
 		scan.Error = err.Error()
+		return scan
 	}
 	if dryRun {
 		return scan
@@ -72,6 +72,7 @@ func (s GrypeScanner) run(cmdline, scanType, scanTarget string, dryRun, pipeline
 	// Parse the JSON output to get the number of vulnerabilities.
 	var data map[string]any
 	if err := json.Unmarshal(stdout, &data); err != nil {
+		scan.Error = err.Error()
 		return scan
 	}
 

@@ -310,9 +310,9 @@ output and summaries to bucket configured for use.`,
 						}
 					}
 
-					// Ensure if --s3-bucket option is provided, so are --git-repo and --build-id options.
-					if s3Bucket != "" && (gitRepo == "" || buildId == "") {
-						return fmt.Errorf("--git-repo and --build-id required in pipeline mode")
+					// Ensure if we're running in pipeline mode, we have a build id.
+					if pipeline && buildId == "" {
+						return fmt.Errorf("--build-id required in pipeline mode")
 					}
 
 					// Ensure if we're running in pipeline mode, the repo is not in a dirty state (unless forced).

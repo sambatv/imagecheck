@@ -56,8 +56,6 @@ func (s TrivyScanner) Scan(scanType, scanTarget, severity string, ignore []strin
 		return s.run(fmt.Sprintf("trivy config %s %s %s", severityOpt, outputOpt, scanTarget), scanType, scanTarget, dryRun, pipelineMode)
 	case "files":
 		return s.run(fmt.Sprintf("trivy filesystem %s %s %s", severityOpt, outputOpt, scanTarget), scanType, scanTarget, dryRun, pipelineMode)
-	case "image":
-		return s.run(fmt.Sprintf("trivy image %s %s %s", severityOpt, outputOpt, scanTarget), scanType, scanTarget, dryRun, pipelineMode)
 	default:
 		return Scan{}
 	}
@@ -87,6 +85,7 @@ func (s TrivyScanner) run(cmdline, scanType, scanTarget string, dryRun, pipeline
 	// Parse the JSON output to get the number of vulnerabilities.
 	var data map[string]any
 	if err := json.Unmarshal(stdout, &data); err != nil {
+		scan.Error = err.Error()
 		return scan
 	}
 
@@ -94,20 +93,24 @@ func (s TrivyScanner) run(cmdline, scanType, scanTarget string, dryRun, pipeline
 	case "config":
 		results := data["Results"].([]any)
 		for _, result := range results {
-			val, ok := result.(map[string]any)["Misconfigurations"]
+			misconfigurations, ok := result.(map[string]any)["Misconfigurations"].([]any)
 			if !ok {
+				scan.Error = "failed to parse trivy config scan output for misconfigurations"
 				continue
 			}
-			misconfigurations := val.(map[string]any)
 			for _, misconfiguration := range misconfigurations {
 				severity := misconfiguration.(map[string]any)["Severity"].(string)
 				scan.Score(severity)
 			}
 		}
-	case "image":
+	case "files":
 		results := data["Results"].([]any)
 		for _, result := range results {
-			vulnerabilities := result.(map[string]any)["Vulnerabilities"].([]any)
+			vulnerabilities, ok := result.(map[string]any)["Vulnerabilities"].([]any)
+			if !ok {
+				scan.Error = "failed to parse trivy files scan output for misconfigurations"
+				continue
+			}
 			for _, vulnerability := range vulnerabilities {
 				severity := vulnerability.(map[string]any)["Severity"].(string)
 				scan.Score(severity)

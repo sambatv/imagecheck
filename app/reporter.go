@@ -52,6 +52,13 @@ func (r ScanReporter) Report(scans []Scan, timestamp time.Time) error {
 		}
 	}
 
+	// Enrich all scans with the S3 URL of their scan output.
+	for i := range scans {
+		sPath := scanPath(scans[i])
+		s3Key := r.S3Key(sPath)
+		scans[i].S3URL = fmt.Sprintf("s3://%s/%s", r.cfg.S3Bucket, s3Key)
+	}
+
 	// Cache the scan summary.
 	summary := NewSummary(scans, timestamp)
 	if err := r.CacheSummary(summary); err != nil {
@@ -87,6 +94,7 @@ func (r ScanReporter) CachePath(filename string) string {
 
 // CacheScan caches the scan output to a local file.
 func (r ScanReporter) CacheScan(scan Scan) error {
+	// Add the S3 URL to the scan for output in report.
 	cachePath := r.CachePath(scanPath(scan))
 	fmt.Printf("caching scan: %s\n", cachePath)
 	if err := ensureDir(path.Dir(cachePath)); err != nil {
@@ -108,9 +116,9 @@ func (r ScanReporter) CacheSummary(summary Summary) error {
 // S3Key returns the S3 key for the scan cache file.
 func (r ScanReporter) S3Key(filename string) string {
 	if r.cfg.S3KeyPrefix != "" {
-		return path.Join(r.cfg.S3KeyPrefix, r.cfg.GitRepo, r.cfg.BuildId, filename)
+		return path.Join(r.cfg.S3KeyPrefix, r.cfg.GitRepo, "builds", r.cfg.BuildId, filename)
 	}
-	return path.Join(r.cfg.GitRepo, r.cfg.BuildId, filename)
+	return path.Join(r.cfg.GitRepo, "builds", r.cfg.BuildId, filename)
 }
 
 // UploadScan uploads the scan cache file to S3.

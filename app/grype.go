@@ -79,7 +79,10 @@ func (s GrypeScanner) run(cmdline, scanType, scanTarget string, dryRun, pipeline
 	// Count the number of vulnerabilities in "matches" by severity.
 	matches := data["matches"].([]interface{})
 	for _, match := range matches {
-		vulnerability := match.(map[string]any)["vulnerability"].(map[string]any)
+		vulnerability, ok := match.(map[string]any)["vulnerability"].(map[string]any)
+		if !ok {
+			scan.Error = "failed to parse grype scan output for defects and vulnerabilities"
+		}
 		severity := vulnerability["severity"].(string)
 		scan.Score(severity)
 	}

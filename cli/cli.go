@@ -3,16 +3,17 @@ package cli
 
 import (
 	"fmt"
-	"github.com/fatih/color"
-	"github.com/rodaine/table"
-	"github.com/sambatv/imagecheck/app"
-	"github.com/urfave/cli/v2"
 	"os"
 	"os/exec"
 	"slices"
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
+	"github.com/rodaine/table"
+	"github.com/urfave/cli/v2"
+
+	"github.com/sambatv/imagecheck/app"
 	"github.com/sambatv/imagecheck/metadata"
 )
 

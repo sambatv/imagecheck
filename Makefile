@@ -80,7 +80,7 @@ endif
 ##@ Dependency targets
 
 .PHONY: deps
-deps: ## Install scanner dependencies
+deps: ## Install all scanner dependency binaries
 	@echo
 	@echo 'installing scanners ...'
 	mkdir -p ./bin
@@ -91,7 +91,7 @@ deps: ## Install scanner dependencies
 ##@ Application targets
 
 .PHONY: build
-build: ## Build the application
+build: ## Build the application binary
 	@echo
 	@echo 'building $(APP_NAME) ...'
 	go build $(GO_LDFLAGS) -o ./bin/$(APP_NAME) .
@@ -115,10 +115,10 @@ test: ## Run the application tests
 	go test -v ./...
 
 .PHONY: clean
-clean: ## Clean application build artifacts
+clean: ## Clean application and all scanner dependency binaries
 	@echo
 	@echo 'cleaning $(APP_NAME) build artifacts ...'
-	rm -f ./bin/$(APP_NAME)
+	rm -rf ./bin
 
 ##@ Image targets
 

@@ -9,7 +9,7 @@ RUN go mod download
 COPY . .
 RUN make build
 
-FROM alpine:3.20.2
+FROM alpine:3.20.3
 RUN apk update && apk upgrade
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
 COPY --from=builder /app/bin/imagecheck /usr/local/bin/

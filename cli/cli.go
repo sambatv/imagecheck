@@ -185,7 +185,7 @@ func New() *cli.App {
 						return fmt.Errorf("settings file exists: %s", settingsFile)
 					}
 
-					settings := app.NewSettings(metadata.Version, severity, ignoreCVEs.Value(), ignoreStates.Value())
+					settings := app.NewScansSettings(metadata.Version, severity, ignoreCVEs.Value(), ignoreStates.Value())
 					if err := app.SaveSettings(settings, settingsFile); err != nil {
 						return err
 					}
@@ -288,7 +288,7 @@ output and summaries to bucket configured for use.`,
 
 					// Load the scan settings from the settings file if it exists or
 					// create a new settings object.
-					var settings *app.ScanSettings
+					var settings *app.ScansSettings
 					if fileExists(settingsFile) {
 						fmt.Printf("Loading settings from %s ...\n", settingsFile)
 						settings, err = app.LoadSettings(settingsFile)
@@ -296,7 +296,7 @@ output and summaries to bucket configured for use.`,
 							return err
 						}
 					} else {
-						settings = app.NewSettings(metadata.Version, severity, ignoreCVEs.Value(), ignoreStates.Value())
+						settings = app.NewScansSettings(metadata.Version, severity, ignoreCVEs.Value(), ignoreStates.Value())
 					}
 
 					// Ensure application is not disabled in settings.
@@ -378,7 +378,7 @@ output and summaries to bucket configured for use.`,
 						PipelineMode: pipeline,
 						Verbose:      verbose,
 						DryRun:       dryRun,
-						Settings:     settings,
+						Settings:     *settings,
 					})
 					beginTime := time.Now()
 					scans := runner.Scan(image)
@@ -481,10 +481,12 @@ func getConfigTable() table.Table {
 }
 
 func getScansTable(scans []app.Scan) table.Table {
-	tbl := table.New("Scan Tool", "Scan Type", "Scan Target", "Exit", "Critical", "High", "Medium", "Low", "Negligible", "Unknown", "Error")
+	tbl := table.New("Scan Tool", "Scan Type", "Scan Target", "Exit",
+		"Critical", "High", "Medium", "Low", "Negligible", "Unknown", "Error")
 	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
 	for _, scan := range scans {
-		tbl.AddRow(scan.ScanTool, scan.ScanType, scan.ScanTarget, scan.ExitCode, scan.NumCritical, scan.NumHigh, scan.NumMedium, scan.NumLow, scan.NumNegligible, scan.NumUnknown, scan.Error)
+		tbl.AddRow(scan.Settings.ScanTool, scan.Settings.ScanType, scan.ScanTarget, scan.ExitCode,
+			scan.NumCritical, scan.NumHigh, scan.NumMedium, scan.NumLow, scan.NumNegligible, scan.NumUnknown, scan.Error)
 	}
 	return tbl
 }

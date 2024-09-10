@@ -30,16 +30,16 @@ func (s TrivyScanner) Version() string {
 }
 
 // Scan scans a target for a type of defect or vulnerability with trivy.
-func (s TrivyScanner) Scan(scanType, scanTarget, severity string, ignore []string, dryRun, pipelineMode bool) Scan {
+func (s TrivyScanner) Scan(target string, settings ScanSettings) Scan {
 	// Set output format to JSON in pipeline mode.
 	var outputOpt string
-	if pipelineMode {
+	if settings.PipelineMode {
 		outputOpt = "--format=json"
 	}
 
 	// Set the failure severity option.
 	var severityOpt string
-	switch severity {
+	switch settings.Severity {
 	case "critical":
 		severityOpt = "--severity=CRITICAL"
 	case "high":
@@ -51,45 +51,51 @@ func (s TrivyScanner) Scan(scanType, scanTarget, severity string, ignore []strin
 	}
 
 	// Scan the appropriate scan command line.
-	switch scanType {
+	var cmdline string
+	switch settings.ScanType {
 	case "config":
-		return s.run(fmt.Sprintf("trivy config %s %s %s", severityOpt, outputOpt, scanTarget), scanType, scanTarget, dryRun, pipelineMode)
+		cmdline = fmt.Sprintf("trivy config %s %s %s", severityOpt, outputOpt, target)
 	case "files":
-		return s.run(fmt.Sprintf("trivy filesystem %s %s %s", severityOpt, outputOpt, scanTarget), scanType, scanTarget, dryRun, pipelineMode)
+		cmdline = fmt.Sprintf("trivy filesystem %s %s %s", severityOpt, outputOpt, target)
 	default:
-		return Scan{}
+		return Scan{} // should never happen
 	}
+	return s.run(cmdline, target, settings)
 }
 
-func (s TrivyScanner) run(cmdline, scanType, scanTarget string, dryRun, pipelineMode bool) Scan {
+func (s TrivyScanner) run(cmdline, target string, settings ScanSettings) Scan {
+	// Execute the scanner command line and calculate the duration.
 	beginTime := time.Now()
-	exitCode, stdout, err := execScanner(cmdline, dryRun, pipelineMode)
+	exitCode, stdout, err := execScanner(cmdline, settings)
 	durationSecs := time.Since(beginTime).Seconds()
+
+	// Create a new scan object to return.
 	scan := Scan{
-		ScanTool:     s.Name(),
-		ScanType:     scanType,
-		ScanTarget:   scanTarget,
+		Settings:     settings,
+		ScanTarget:   target,
 		CommandLine:  cmdline,
 		DurationSecs: durationSecs,
 		ExitCode:     exitCode,
 		stdout:       stdout,
 	}
+
+	// If there was an error or is a dry run, there's nothing more to do.
 	if err != nil {
 		scan.Error = err.Error()
 		return scan
 	}
-	if dryRun {
+	if settings.DryRun {
 		return scan
 	}
 
-	// Parse the JSON output to get the number of vulnerabilities.
+	// Otherwise, parse the JSON output to get the number of vulnerabilities.
 	var data map[string]any
 	if err := json.Unmarshal(stdout, &data); err != nil {
 		scan.Error = err.Error()
 		return scan
 	}
 
-	switch scanType {
+	switch settings.ScanType {
 	case "config":
 		results := data["Results"].([]any)
 		for _, result := range results {

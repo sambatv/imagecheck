@@ -6,20 +6,19 @@ import (
 
 // Scan represents the results of a scan.
 type Scan struct {
-	ScanTool      string  `json:"scanTool"`
-	ScanType      string  `json:"scanType"`
-	ScanTarget    string  `json:"scanTarget"`
-	CommandLine   string  `json:"commandLine"`
-	DurationSecs  float64 `json:"durationSecs"`
-	Error         string  `json:"error"`
-	ExitCode      int     `json:"exitCode"`
-	NumCritical   int     `json:"numCritical"`
-	NumHigh       int     `json:"numHigh"`
-	NumMedium     int     `json:"numMedium"`
-	NumLow        int     `json:"numLow"`
-	NumNegligible int     `json:"numNegligible"`
-	NumUnknown    int     `json:"numUnknown"`
-	S3URL         string  `json:"s3URL"`
+	Settings      ScanSettings `json:"scanSettings"`
+	ScanTarget    string       `json:"scanTarget"`
+	CommandLine   string       `json:"commandLine"`
+	DurationSecs  float64      `json:"durationSecs"`
+	Error         string       `json:"error"`
+	ExitCode      int          `json:"exitCode"`
+	NumCritical   int          `json:"numCritical"`
+	NumHigh       int          `json:"numHigh"`
+	NumMedium     int          `json:"numMedium"`
+	NumLow        int          `json:"numLow"`
+	NumNegligible int          `json:"numNegligible"`
+	NumUnknown    int          `json:"numUnknown"`
+	S3URL         string       `json:"s3URL"`
 	stdout        []byte
 }
 

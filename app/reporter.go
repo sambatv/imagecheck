@@ -202,10 +202,10 @@ func NewSummary(scans []Scan, timestamp time.Time) Summary {
 // scanPath returns the path of the scan output file.
 func scanPath(s Scan) string {
 	const fileName = "scan.json"
-	if s.ScanType == "image" {
-		return filepath.Join(s.ScanTool, s.ScanType, s.ScanTarget, fileName)
+	if s.Settings.ScanType == "image" {
+		return filepath.Join(s.Settings.ScanTool, s.Settings.ScanType, s.ScanTarget, fileName)
 	}
-	return filepath.Join(s.ScanTool, s.ScanType, fileName)
+	return filepath.Join(s.Settings.ScanTool, s.Settings.ScanType, fileName)
 }
 
 // summaryPath returns the path of the summary output file.

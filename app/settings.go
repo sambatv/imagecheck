@@ -4,40 +4,52 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"time"
 )
 
-// ScanSettings represents the configuration settings for the application.
-type ScanSettings struct {
-	AppVersion string        `json:"appVersion"`
-	InitTime   string        `json:"initTime"`
-	Disabled   bool          `json:"disabled"`
-	Scans      []ScanSetting `json:"scans"`
+// ScansSettings represents the configuration settings for the application.
+type ScansSettings struct {
+	AppVersion string         `json:"appVersion"`
+	Disabled   bool           `json:"disabled"`
+	Scans      []ScanSettings `json:"scans"`
 }
 
-// ScanSetting represents the settings for a specific scan.
-type ScanSetting struct {
-	Disabled     bool     `json:"disabled"`
+// FindScanSetting finds a specific scan setting by scan tool and scan type.
+func (s ScansSettings) FindScanSetting(scanTool, scanType string) ScanSettings {
+	for _, setting := range s.Scans {
+		if setting.ScanTool == scanTool && setting.ScanType == scanType {
+			return setting
+		}
+	}
+	return ScanSettings{}
+}
+
+// ScanSettings represents the settings for a specific scan, some of which are
+// not persisted to disk in JSON format, but are set at runtime from the command
+// line options.
+type ScanSettings struct {
 	ScanTool     string   `json:"scanTool"`
 	ScanType     string   `json:"scanType"`
+	Severity     string   `json:"severity"`
+	Disabled     bool     `json:"disabled"`
 	IgnoreCVEs   []string `json:"ignoreCVEs"`
 	IgnoreStates []string `json:"ignoreStates"`
-	Severity     string   `json:"severity"`
+	DryRun       bool
+	PipelineMode bool
+	Verbose      bool
 }
 
-// NewSettings creates a new ScanSettings object.
-func NewSettings(appVersion, severity string, ignoreCVEs, ignoreStates []string) *ScanSettings {
+// NewScansSettings creates a new ScansSettings object.
+func NewScansSettings(appVersion, severity string, ignoreCVEs, ignoreStates []string) *ScansSettings {
 	if ignoreCVEs == nil {
 		ignoreCVEs = make([]string, 0)
 	}
 	if ignoreStates == nil {
 		ignoreStates = make([]string, 0)
 	}
-	return &ScanSettings{
+	return &ScansSettings{
 		AppVersion: appVersion,
-		InitTime:   time.Now().Format(time.RFC3339),
 		Disabled:   false,
-		Scans: []ScanSetting{
+		Scans: []ScanSettings{
 			{
 				ScanTool:     "grype",
 				ScanType:     "files",
@@ -90,9 +102,9 @@ func NewSettings(appVersion, severity string, ignoreCVEs, ignoreStates []string)
 	}
 }
 
-// LoadSettings loads ScanSettings from a file.
-func LoadSettings(path string) (*ScanSettings, error) {
-	settings := &ScanSettings{}
+// LoadSettings loads ScansSettings from a file.
+func LoadSettings(path string) (*ScansSettings, error) {
+	settings := &ScansSettings{}
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -107,8 +119,8 @@ func LoadSettings(path string) (*ScanSettings, error) {
 	return settings, nil
 }
 
-// SaveSettings saves ScanSettings to a file.
-func SaveSettings(settings *ScanSettings, path string) error {
+// SaveSettings saves ScansSettings to a file.
+func SaveSettings(settings *ScansSettings, path string) error {
 	// Ensure the directory exists.
 	if err := ensureDir(filepath.Dir(path)); err != nil {
 		return err

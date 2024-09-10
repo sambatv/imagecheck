@@ -15,7 +15,7 @@ type ScanRunnerConfig struct {
 	PipelineMode bool
 	Severity     string
 	Ignore       []string
-	Settings     *ScanSettings
+	Settings     ScansSettings
 }
 
 // ScanRunner runs scans.
@@ -31,7 +31,15 @@ func NewScanRunner(config ScanRunnerConfig) *ScanRunner {
 // Scan runs the scans and returns their results.
 func (r ScanRunner) Scan(image string) []Scan {
 	runScan := func(scanTool, scanType, scanTarget string) Scan {
-		return ScanTools[scanTool].Scan(scanType, scanTarget, r.cfg.Severity, r.cfg.Ignore, r.cfg.DryRun, r.cfg.PipelineMode)
+		// Find the scan settings from the settings loaded from the settings file
+		scanSettings := r.cfg.Settings.FindScanSetting(scanTool, scanType)
+		// Enrich the scan settings with the runtime configuration passed in from the command line.
+		scanSettings.DryRun = r.cfg.DryRun
+		scanSettings.PipelineMode = r.cfg.PipelineMode
+		scanSettings.Severity = r.cfg.Severity
+		scanSettings.Verbose = r.cfg.Verbose
+		// Run the scan.
+		return ScanTools[scanTool].Scan(scanTarget, scanSettings)
 	}
 
 	scans := make([]Scan, 0)
@@ -60,7 +68,7 @@ func (r ScanRunner) Scan(image string) []Scan {
 // ScanTool defines behaviors for a scanner application used to scan a target for a type of defect or vulnerability.
 type ScanTool interface {
 	// Scan scans a target for a type of defect or vulnerability.
-	Scan(scanType, scanTarget, severity string, ignore []string, dryRun, pipelineMode bool) Scan
+	Scan(target string, settings ScanSettings) Scan
 
 	// Name returns the name of the scanner application.
 	Name() string
@@ -76,9 +84,9 @@ var ScanTools = map[string]ScanTool{
 	"trufflehog": &TrufflehogScanner{},
 }
 
-// execScanner executes a scan tool command line and returns its exit code, stdout and stderr.
-func execScanner(cmdline string, dryRun, pipelineMode bool) (int, []byte, error) {
-	if dryRun {
+// execScanner executes a scan tool command line per its settings and returns its exit code, stdout and stderr.
+func execScanner(cmdline string, settings ScanSettings) (int, []byte, error) {
+	if settings.DryRun {
 		fmt.Println(cmdline)
 		return 0, []byte{}, nil
 	}
@@ -88,7 +96,7 @@ func execScanner(cmdline string, dryRun, pipelineMode bool) (int, []byte, error)
 		stdout   []byte
 		err      error
 	)
-	if pipelineMode {
+	if settings.PipelineMode || settings.Verbose {
 		fmt.Printf("running: %s\n", cmdline)
 	}
 
@@ -99,7 +107,7 @@ func execScanner(cmdline string, dryRun, pipelineMode bool) (int, []byte, error)
 	cmd := exec.Command(executable, args...)
 
 	// If not in pipeline mode, print the command's stderr, typically progress info, to the console.
-	if !pipelineMode {
+	if !settings.PipelineMode {
 		cmd.Stderr = os.Stderr
 	}
 
@@ -113,7 +121,7 @@ func execScanner(cmdline string, dryRun, pipelineMode bool) (int, []byte, error)
 	}
 
 	// If not in pipeline mode, print the command's stdout to the console.
-	if !pipelineMode {
+	if !settings.PipelineMode {
 		fmt.Println(string(stdout))
 	}
 	return exitCode, stdout, err

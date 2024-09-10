@@ -28,46 +28,52 @@ func (s TrufflehogScanner) Version() string {
 }
 
 // Scan scans a target for a type of defect or vulnerability with trufflehog.
-func (s TrufflehogScanner) Scan(scanType, scanTarget, severity string, ignore []string, dryRun, pipelineMode bool) Scan {
+func (s TrufflehogScanner) Scan(target string, settings ScanSettings) Scan {
 	// Set output format to JSON in pipeline mode.
 	var outputOpt string
-	if pipelineMode {
+	if settings.PipelineMode {
 		outputOpt = "--json"
 	}
 
 	// Scan the appropriate scan command line.
-	switch scanType {
+	var cmdline string
+	switch settings.ScanType {
 	case "files":
-		return s.run(fmt.Sprintf("trufflehog --fail %s filesystem %s", outputOpt, scanTarget), scanType, scanTarget, dryRun, pipelineMode)
+		cmdline = fmt.Sprintf("trufflehog --fail %s filesystem %s", outputOpt, target)
 	case "image":
-		return s.run(fmt.Sprintf("trufflehog --fail %s docker --image=%s", outputOpt, scanTarget), scanType, scanTarget, dryRun, pipelineMode)
+		cmdline = fmt.Sprintf("trufflehog --fail %s docker --image=%s", outputOpt, target)
 	default:
-		return Scan{}
+		return Scan{} // should never happen
 	}
+	return s.run(cmdline, target, settings)
 }
 
-func (s TrufflehogScanner) run(cmdline, scanType, scanTarget string, dryRun, pipelineMode bool) Scan {
+func (s TrufflehogScanner) run(cmdline, target string, settings ScanSettings) Scan {
+	// Execute the scanner command line and calculate the duration.
 	beginTime := time.Now()
-	exitCode, stdout, err := execScanner(cmdline, dryRun, pipelineMode)
+	exitCode, stdout, err := execScanner(cmdline, settings)
 	durationSecs := time.Since(beginTime).Seconds()
+
+	// Create a new scan object to return.
 	scan := Scan{
-		ScanTool:     s.Name(),
-		ScanType:     scanType,
-		ScanTarget:   scanTarget,
+		Settings:     settings,
+		ScanTarget:   target,
 		CommandLine:  cmdline,
 		DurationSecs: durationSecs,
 		ExitCode:     exitCode,
-		stdout:       wrapJsonArray(stdout),
+		stdout:       wrapJSONArray(stdout),
 	}
+
+	// If there was an error or is a dry run, there's nothing more to do.
 	if err != nil {
 		scan.Error = err.Error()
 		return scan
 	}
-	if dryRun {
+	if settings.DryRun {
 		return scan
 	}
 
-	// Parse the JSON output to get the number of vulnerabilities.
+	// Otherwise, parse the JSON output to get the number of vulnerabilities.
 	var data []any
 	if err := json.Unmarshal(scan.stdout, &data); err != nil {
 		scan.Error = err.Error()
@@ -80,10 +86,10 @@ func (s TrufflehogScanner) run(cmdline, scanType, scanTarget string, dryRun, pip
 	return scan
 }
 
-// wrapJsonArray wraps the given bytes in a JSON array.
+// wrapJSONArray wraps the given bytes in a JSON array.
 // This is necessary because trufflehog outputs one JSON object per line with
 // no comma delimiters between them, which is not a valid JSON doc.
-func wrapJsonArray(bytes []byte) []byte {
+func wrapJSONArray(bytes []byte) []byte {
 	s := strings.TrimSpace(string(bytes))
 	lines := strings.Split(s, "\n")
 	if len(lines) == 0 {

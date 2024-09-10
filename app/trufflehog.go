@@ -11,11 +11,6 @@ import (
 // TrufflehogScanner is a struct that represents a trufflehog scanner.
 type TrufflehogScanner struct{}
 
-// Name returns the name of the trufflehog scanner application.
-func (s TrufflehogScanner) Name() string {
-	return "trufflehog"
-}
-
 // Version returns the version of the trufflehog scanner application.
 func (s TrufflehogScanner) Version() string {
 	cmd := exec.Command("trufflehog", "--version")

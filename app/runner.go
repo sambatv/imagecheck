@@ -74,9 +74,6 @@ type ScanTool interface {
 	// Scan scans a target for a type of defect or vulnerability.
 	Scan(target string, settings ScanSettings) Scan
 
-	// Name returns the name of the scanner application.
-	Name() string
-
 	// Version returns the version of the scanner application.
 	Version() string
 }

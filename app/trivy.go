@@ -10,11 +10,6 @@ import (
 // TrivyScanner is a struct that represents a trivy scanner.
 type TrivyScanner struct{}
 
-// Name returns the name of the trivy scanner application.
-func (s TrivyScanner) Name() string {
-	return "trivy"
-}
-
 // Version returns the version of the trivy scanner application.
 func (s TrivyScanner) Version() string {
 	cmd := exec.Command("trivy", "version", "--format", "json")

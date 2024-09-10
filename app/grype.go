@@ -10,11 +10,6 @@ import (
 // GrypeScanner is a struct that represents a grype scanner.
 type GrypeScanner struct{}
 
-// Name returns the name of the grype scanner application.
-func (s GrypeScanner) Name() string {
-	return "grype"
-}
-
 // Version returns the version of the grype scanner application.
 func (s GrypeScanner) Version() string {
 	cmd := exec.Command("grype", "version", "--output", "json")

@@ -1,4 +1,5 @@
 # build output
+bin/
 imagecheck
 
 # config files

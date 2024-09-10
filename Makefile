@@ -77,13 +77,24 @@ ifneq ($(RELEASE),)
 	@echo "IMAGE_VERSIONED:     $(IMAGE_VERSIONED)"
 endif
 
+##@ Dependency targets
+
+.PHONY: deps
+deps: ## Install scanner dependencies
+	@echo
+	@echo 'installing scanners ...'
+	mkdir -p ./bin
+	curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b ./bin
+	curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ./bin
+	curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b ./bin
+
 ##@ Application targets
 
 .PHONY: build
 build: ## Build the application
 	@echo
 	@echo 'building $(APP_NAME) ...'
-	go build $(GO_LDFLAGS) -o $(APP_NAME) .
+	go build $(GO_LDFLAGS) -o ./bin/$(APP_NAME) .
 
 .PHONY: lint
 lint: ## Lint the application
@@ -107,7 +118,7 @@ test: ## Run the application tests
 clean: ## Clean application build artifacts
 	@echo
 	@echo 'cleaning $(APP_NAME) build artifacts ...'
-	rm -f $(APP_NAME)
+	rm -f ./bin/$(APP_NAME)
 
 ##@ Image targets
 

@@ -383,16 +383,18 @@ output and summaries to bucket configured for use.`,
 					beginTime := time.Now()
 					scans := runner.Scan(image)
 
+					// Print the table of scan results as necessary.
+					if verbose || pipeline {
+						fmt.Println("RESULTS")
+						tbl := getScansTable(scans)
+						tbl.Print()
+						fmt.Println()
+					}
+
 					// We're done if we're not running in pipeline mode or if running in dry run mode.
 					if !pipeline || dryRun {
 						return nil
 					}
-
-					// Otherwise, continue pipeline mode processing by printing a table of scan results.
-					fmt.Println("\nRESULTS")
-					tbl := getScansTable(scans)
-					tbl.Print()
-					fmt.Println()
 
 					// Create a new scan reporter and report the scans.
 					reporter := app.NewScanReporter(app.ScanReporterConfig{

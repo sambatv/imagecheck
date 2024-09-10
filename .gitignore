@@ -2,6 +2,9 @@
 bin/
 imagecheck
 
+# local imagecheck scans
+cache/
+
 # config files
 .imagecheck.json
 

@@ -106,7 +106,7 @@ lint: ## Lint the application
 scan: build ## Scan the application for defects and vulnerabilities
 	@echo
 	@echo 'scanning $(APP_NAME) ...'
-	./$(APP_NAME) scan
+	./bin/$(APP_NAME) scan
 
 .PHONY: test
 test: ## Run the application tests
@@ -141,7 +141,7 @@ endif
 image-scan: build ## Scan the container image for defects and vulnerabilities
 	@echo
 	@echo 'scanning image $(IMAGE) ...'
-	./$(APP_NAME) scan --force $(IMAGE)
+	./bin/$(APP_NAME) scan --force $(IMAGE)
 
 .PHONY: image-push
 image-push: ## Push the container image
@@ -155,4 +155,23 @@ ifneq ($(RELEASE),)
 	@echo
 	@echo 'pushing versioned image $(IMAGE_VERSIONED) ...'
 	docker push $(IMAGE_VERSIONED)
+endif
+
+##@ Release targets
+
+.PHONY: tag-release
+tag-release: ## Tag application release and push to origin
+ifeq ($(RELEASE),)
+	@echo
+	@echo 'RELEASE not defined, skipping release'
+	@exit 1
+else ifneq ($(DIRTY),)
+	@echo
+	@echo 'git commit is dirty, skipping release'
+	@exit 1
+else
+	@echo
+	@echo 'releasing $(APP_NAME) ...'
+	@echo git tag -a v$(APP_VERSION) -m "Release v$(APP_VERSION)"
+	@echo git push origin v$(APP_VERSION)
 endif

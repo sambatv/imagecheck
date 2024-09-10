@@ -49,19 +49,22 @@ Info targets
   vars             Show environment variables used by this Makefile
 
 Dependency targets
-  deps             Install scanner dependencies
+  deps             Install all scanner dependency binaries
 
 Application targets
-  build            Build the application
+  build            Build the application binary
   lint             Lint the application
   scan             Scan the application for defects and vulnerabilities
   test             Run the application tests
-  clean            Clean application build artifacts
+  clean            Clean application and all scanner dependency binaries
 
 Image targets
   image-build      Build the container image
   image-scan       Scan the container image for defects and vulnerabilities
   image-push       Push the container image
+
+Release targets
+  tag-release      Tag application release and push to origin
 ```
 
 The first thing that should be done is to install the project dependencies:
@@ -145,13 +148,13 @@ The development process to make a release is as follows:
 6. The pull request is merged into main.
 7. The `VERSION` file is updated with the new version number.
 8. A commit is made with the updated `VERSION` file.
-9. The commit is tagged with the new version number.
-10. The commit and tag are pushed to the remote repository.
-11. The release workflow is triggered by the new tag.
-12. The release workflow builds the application binaries and container image.
-13. The release workflow uploads the application binaries and container image to
+9. A release is tagged with the new version number and pushed to the remote
+   repository with the `make tag-release` command.
+10. The release workflow is triggered by the new tag.
+11. The release workflow builds the application binaries and container image.
+12. The release workflow uploads the application binaries and container image to
     its GitHub Releases and GitHub Packages.
-14. The GitHub Pages documentation reflects any new changes to content in the
+13. The GitHub Pages documentation reflects any new changes to content in the
     `docs/` directory.
 
 ## License

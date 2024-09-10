@@ -22,7 +22,7 @@ const (
 )
 
 var (
-	defaultSettingsFile = fmt.Sprintf(".%s.json", metadata.Name)
+	defaultSettingsFile = fmt.Sprintf(".%s.settings.json", metadata.Name)
 	validSeverities     = []string{"critical", "high", "medium", "low"}
 	validIgnoreStates   = []string{"fixed", "not-fixed", "wont-fix", "unknown"}
 )

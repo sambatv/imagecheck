@@ -12,7 +12,7 @@ RUN make build
 FROM alpine:3.20.2
 RUN apk update && apk upgrade
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
-COPY --from=builder /app/imagecheck /usr/local/bin/
+COPY --from=builder /app/bin/imagecheck /usr/local/bin/
 USER 1001:1001
 WORKDIR /app
 ENTRYPOINT ["/usr/local/bin/imagecheck"]

@@ -141,7 +141,7 @@ endif
 image-scan: build ## Scan the container image for defects and vulnerabilities
 	@echo
 	@echo 'scanning image $(IMAGE) ...'
-	./$(APP_NAME) scan $(IMAGE)
+	./$(APP_NAME) scan --force $(IMAGE)
 
 .PHONY: image-push
 image-push: ## Push the container image

@@ -175,6 +175,7 @@ func New() *cli.App {
 				Flags: []cli.Flag{
 					&settingsFileFlag,
 					&severityFlag,
+					&ignoreCVEsFlag,
 					&ignoreStatesFlag,
 				},
 				Action: func(c *cli.Context) error {
@@ -299,6 +300,16 @@ output and summaries to bucket configured for use.`,
 						settings = app.NewScansSettings(metadata.Version, severity, ignoreCVEs.Value(), ignoreStates.Value())
 					}
 
+					// Print the settings if we're running in pipeline mode.
+					if pipeline {
+						settingsText, err := settings.ToJSON()
+						if err != nil {
+							return err
+						}
+						fmt.Println("SCAN SETTINGS")
+						fmt.Printf("%s\n\n", settingsText)
+					}
+
 					// Ensure application is not disabled in settings.
 					if settings.Disabled {
 						fmt.Println("exiting disabled application")
@@ -362,19 +373,19 @@ output and summaries to bucket configured for use.`,
 						tbl.Print()
 						fmt.Println()
 
-						fmt.Println("SCANNERS")
+						fmt.Println("SCAN TOOLS")
 						tbl = getScanToolsTable()
 						tbl.Print()
 						fmt.Println()
 					}
-
 					// Get the start time timestamp, create a scan runner, and run the scans.
 					if verbose || pipeline {
 						fmt.Println("Running scans ...")
 					}
 					runner := app.NewScanRunner(app.ScanRunnerConfig{
 						Severity:     severity,
-						Ignore:       ignoreStates.Value(),
+						IgnoreCVEs:   ignoreCVEs.Value(),
+						IgnoreStates: ignoreStates.Value(),
 						PipelineMode: pipeline,
 						Verbose:      verbose,
 						DryRun:       dryRun,
@@ -383,18 +394,16 @@ output and summaries to bucket configured for use.`,
 					beginTime := time.Now()
 					scans := runner.Scan(image)
 
-					// Print the table of scan results as necessary.
-					if verbose || pipeline {
-						fmt.Println("RESULTS")
-						tbl := getScansTable(scans)
-						tbl.Print()
-						fmt.Println()
-					}
-
 					// We're done if we're not running in pipeline mode or if running in dry run mode.
 					if !pipeline || dryRun {
 						return nil
 					}
+
+					// Print the table of scan results.
+					fmt.Println("\nRESULTS")
+					tbl := getScansTable(scans)
+					tbl.Print()
+					fmt.Println()
 
 					// Create a new scan reporter and report the scans.
 					reporter := app.NewScanReporter(app.ScanReporterConfig{

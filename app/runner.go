@@ -14,7 +14,8 @@ type ScanRunnerConfig struct {
 	Verbose      bool
 	PipelineMode bool
 	Severity     string
-	Ignore       []string
+	IgnoreCVEs   []string
+	IgnoreStates []string
 	Settings     ScansSettings
 }
 

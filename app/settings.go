@@ -13,6 +13,15 @@ type ScansSettings struct {
 	Scans      []ScanSettings `json:"scans"`
 }
 
+// ToJSON returns the JSON representation of a ScansSettings object.
+func (s ScansSettings) ToJSON() (string, error) {
+	data, err := json.MarshalIndent(s, "", "  ")
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
 // FindScanSetting finds a specific scan setting by scan tool and scan type.
 func (s ScansSettings) FindScanSetting(scanTool, scanType string) ScanSettings {
 	for _, setting := range s.Scans {

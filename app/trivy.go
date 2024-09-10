@@ -95,7 +95,7 @@ func (s TrivyScanner) run(cmdline, scanType, scanTarget string, dryRun, pipeline
 		for _, result := range results {
 			misconfigurations, ok := result.(map[string]any)["Misconfigurations"].([]any)
 			if !ok {
-				scan.Error = "failed to parse trivy config scan output for misconfigurations"
+				// No misconfigurations found. Yay!
 				continue
 			}
 			for _, misconfiguration := range misconfigurations {
@@ -108,7 +108,7 @@ func (s TrivyScanner) run(cmdline, scanType, scanTarget string, dryRun, pipeline
 		for _, result := range results {
 			vulnerabilities, ok := result.(map[string]any)["Vulnerabilities"].([]any)
 			if !ok {
-				scan.Error = "failed to parse trivy files scan output for misconfigurations"
+				// No vulnerabilities found. Yay!
 				continue
 			}
 			for _, vulnerability := range vulnerabilities {

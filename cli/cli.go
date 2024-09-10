@@ -17,14 +17,14 @@ import (
 )
 
 const (
-	defaultCacheDir     = "cache"
-	defaultSettingsFile = ".imagecheck.json"
-	defaultSeverity     = "medium"
+	defaultCacheDir = "cache"
+	defaultSeverity = "medium"
 )
 
 var (
-	validSeverities   = []string{"critical", "high", "medium", "low"}
-	validIgnoreStates = []string{"fixed", "not-fixed", "wont-fix", "unknown"}
+	defaultSettingsFile = fmt.Sprintf(".%s.json", metadata.Name)
+	validSeverities     = []string{"critical", "high", "medium", "low"}
+	validIgnoreStates   = []string{"fixed", "not-fixed", "wont-fix", "unknown"}
 )
 
 // ----------------------------------------------------------------------------

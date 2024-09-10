@@ -94,7 +94,7 @@ bin/imagecheck --help
 > export PATH=$(pwd)/bin:$PATH
 > ```
 > 
-> If you are using [https://direnv.net/], you should add that export statement
+> If you are using [direnv](https://direnv.net/), you should add that export statement
 > to your `.envrc` file:
 > 
 > ```shell
@@ -131,7 +131,7 @@ make image-scan
 
 ### Release workflow
 
-The release workflow is automated using [GitHub Actions](https://docs.github.com/en/actions.
+The release workflow is automated using [GitHub Actions](https://docs.github.com/en/actions).
 as defined in the [`.github/workflows/release.yaml`](.github/workflows/release.yaml)
 file when a new version tag on the `main` branch is pushed to the remote repository.
 

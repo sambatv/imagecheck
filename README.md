@@ -15,11 +15,12 @@ Its user documentation is available at https://sambatv.github.io/imagecheck.
 
 ## Organization
 
-The `imagecheck` application is written in Golang and is organized as follows:
+The `imagecheck` application is written in Golang, requiring Go 1.23 or later,
+and is organized as follows:
 
 * [`.github/workflows/release.yaml`](.github/workflows/release.yaml) - GitHub Actions release workflow
 * [`app/`](app) - application library source code
-* [`bin/`](bin) - application binary artifacts (populated by the Makefile `deps` and `build` targets)
+* [`bin/`](bin) - application binary artifacts (ignored, populated by the Makefile `deps` and `build` targets)
 * [`cli/`](cli) - application command line interface source code
 * [`docs/`](docs) - project documentation hosted on GitHub Pages using [docsify](https://docsify.js.org/)
 * [`.tool-versions`](.tool-versions) - [asdf](https://asdf-vm.com/)-managed toolchain versions

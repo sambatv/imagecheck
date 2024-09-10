@@ -75,7 +75,8 @@ After installation, the `imagecheck` binary will be available in your
 
 ### go install
 
-The `imagecheck` binary can be installed using the `go` toolchain:
+The `imagecheck` binary can be installed remotely using the `go` toolchain,
+if you have the required Go version 1.23 or higher installed:
 
 ```shell
 GOBIN=$HOME/bin go install github.com/sambatv/imagecheck@latest
@@ -86,7 +87,7 @@ After installation, the `imagecheck` binary will be available in your
 
 ### go build
 
-You can also build the application locally:
+You can also build the application locally using the `go` toolchain:
 
 ```shell
 git clone https://github.com/sambatv/imagecheck.git

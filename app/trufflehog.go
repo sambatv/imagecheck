@@ -33,6 +33,8 @@ func (s TrufflehogScanner) Scan(target string, settings ScanSettings) Scan {
 	var outputOpt string
 	if settings.PipelineMode {
 		outputOpt = "--json"
+	} else {
+		outputOpt = "--no-json"
 	}
 
 	// Scan the appropriate scan command line.

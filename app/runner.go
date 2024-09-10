@@ -31,17 +31,20 @@ func NewScanRunner(config ScanRunnerConfig) *ScanRunner {
 // Scan runs the scans and returns their results.
 func (r ScanRunner) Scan(image string) []Scan {
 	runScan := func(scanTool, scanType, scanTarget string) Scan {
-		// Find the scan settings from the settings loaded from the settings file
+		// Find the scan settings from those loaded from the settings file.
 		scanSettings := r.cfg.Settings.FindScanSetting(scanTool, scanType)
+
 		// Enrich the scan settings with the runtime configuration passed in from the command line.
 		scanSettings.DryRun = r.cfg.DryRun
 		scanSettings.PipelineMode = r.cfg.PipelineMode
 		scanSettings.Severity = r.cfg.Severity
 		scanSettings.Verbose = r.cfg.Verbose
+
 		// Run the scan.
 		return ScanTools[scanTool].Scan(scanTarget, scanSettings)
 	}
 
+	// Run scans based on scan settings and image argument (or lack thereof).
 	scans := make([]Scan, 0)
 	for _, setting := range r.cfg.Settings.Scans {
 		if setting.Disabled {
@@ -50,16 +53,17 @@ func (r ScanRunner) Scan(image string) []Scan {
 			}
 			continue
 		}
-		if setting.ScanType == "image" && image == "" {
-			if r.cfg.Verbose {
-				fmt.Printf("skipping image scan with no image argument: %s %s\n", setting.ScanTool, setting.ScanType)
-			}
+		if (setting.ScanType == "image" && image == "") || setting.ScanType != "image" && image != "" {
 			continue
 		}
+
+		// Determine the scan target.
 		scanTarget := currentDir
 		if setting.ScanType == "image" {
 			scanTarget = image
 		}
+
+		// Run the scan and append it to the scans results being returned.
 		scans = append(scans, runScan(setting.ScanTool, setting.ScanType, scanTarget))
 	}
 	return scans

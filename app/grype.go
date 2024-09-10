@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"strings"
 	"time"
 )
 
@@ -77,16 +78,46 @@ func (s GrypeScanner) run(cmdline, target string, settings ScanSettings) Scan {
 		return scan
 	}
 
-	// Count the number of vulnerabilities in "matches" by severity.
+	// Count the number of vulnerabilities by severity.
 	matches := data["matches"].([]interface{})
+	if settings.pipelineMode || settings.verbose {
+		fmt.Printf("num vulnerabilities: %d\n", len(matches))
+	}
 	for _, match := range matches {
-		vulnerability, ok := match.(map[string]any)["vulnerability"].(map[string]any)
-		if !ok {
-			// No vulnerability found. Yay!
+		vulnerability := match.(map[string]any)["vulnerability"].(map[string]any)
+
+		// Score the vulnerability based on its severity.
+		severity := vulnerability["severity"].(string)
+		severity = strings.ToLower(severity)
+		scan.Score(severity)
+
+		// Test if vulnerability id is ignored.
+		id := vulnerability["id"].(string)
+		if settings.verbose || settings.pipelineMode {
+			fmt.Printf("vulnerability: id=%s, severity=%s\n", id, severity)
+		}
+		if settings.IsIgnoredID(id) {
+			scan.NumIgnored++
+			if settings.verbose || settings.pipelineMode {
+				fmt.Printf("ignoring id: id=%s, severity=%s\n", id, severity)
+			}
 			continue
 		}
-		severity := vulnerability["severity"].(string)
-		scan.Score(severity)
+
+		// Test if vulnerability fix state is ignored.
+		fix := vulnerability["fix"].(map[string]any)
+		state := fix["state"].(string)
+		state = strings.ToLower(state)
+		if settings.IsIgnoredState(state) {
+			scan.NumIgnored++
+			if settings.verbose || settings.pipelineMode {
+				fmt.Printf("ignoring state: id=%s, severity=%s, state=%s\n", id, severity, state)
+			}
+			continue
+		}
+
+		// If not ignored, the scan is ok if the severity is below the failure threshold.
+		scan.Ok = !scan.Failed()
 	}
 	return scan
 }

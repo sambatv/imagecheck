@@ -99,6 +99,9 @@ func (s TrivyScanner) run(cmdline, target string, settings ScanSettings) Scan {
 				// No misconfigurations found. Yay!
 				continue
 			}
+			if settings.pipelineMode || settings.verbose {
+				fmt.Printf("num misconfigurations: %d\n", len(misconfigurations))
+			}
 			for _, misconfiguration := range misconfigurations {
 				severity := misconfiguration.(map[string]any)["Severity"].(string)
 				scan.Score(severity)
@@ -111,6 +114,9 @@ func (s TrivyScanner) run(cmdline, target string, settings ScanSettings) Scan {
 			if !ok {
 				// No vulnerabilities found. Yay!
 				continue
+			}
+			if settings.pipelineMode || settings.verbose {
+				fmt.Printf("num vulnerabilities: %d\n", len(vulnerabilities))
 			}
 			for _, vulnerability := range vulnerabilities {
 				severity := vulnerability.(map[string]any)["Severity"].(string)

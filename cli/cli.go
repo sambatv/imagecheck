@@ -83,12 +83,12 @@ var severityFlag = cli.StringFlag{
 	Category:    "Scanning",
 }
 
-var ignoreCVEs cli.StringSlice
-var ignoreCVEsFlag = cli.StringSliceFlag{
-	Name:        "ignore-cve",
-	Destination: &ignoreCVEs,
+var ignoreIDs cli.StringSlice
+var ignoreIDsFlag = cli.StringSliceFlag{
+	Name:        "ignore-id",
+	Destination: &ignoreIDs,
 	Usage:       "ignore defects or vulnerabilities with any of the CVE ids",
-	EnvVars:     []string{fmt.Sprintf("%s_IGNORECVES", strings.ToUpper(metadata.Name))},
+	EnvVars:     []string{fmt.Sprintf("%s_IGNOREIDS", strings.ToUpper(metadata.Name))},
 	Category:    "Scanning",
 }
 
@@ -96,7 +96,7 @@ var ignoreStates cli.StringSlice
 var ignoreStatesFlag = cli.StringSliceFlag{
 	Name:        "ignore-state",
 	Destination: &ignoreStates,
-	Usage:       "ignore defects or vulnerabilities with any of the specified fix states",
+	Usage:       "ignore defects or vulnerabilities with any of the specified CVE fix states",
 	EnvVars:     []string{fmt.Sprintf("%s_IGNORESTATES", strings.ToUpper(metadata.Name))},
 	Category:    "Scanning",
 }
@@ -175,7 +175,7 @@ func New() *cli.App {
 				Flags: []cli.Flag{
 					&settingsFileFlag,
 					&severityFlag,
-					&ignoreCVEsFlag,
+					&ignoreIDsFlag,
 					&ignoreStatesFlag,
 				},
 				Action: func(c *cli.Context) error {
@@ -186,7 +186,7 @@ func New() *cli.App {
 						return fmt.Errorf("settings file exists: %s", settingsFile)
 					}
 
-					settings := app.NewScansSettings(metadata.Version, severity, ignoreCVEs.Value(), ignoreStates.Value())
+					settings := app.NewScansSettings(metadata.Version, severity, ignoreIDs.Value(), ignoreStates.Value())
 					if err := app.SaveSettings(settings, settingsFile); err != nil {
 						return err
 					}
@@ -275,7 +275,7 @@ output and summaries to bucket configured for use.`,
 					&dryRunFlag,
 					&verboseFlag,
 					&severityFlag,
-					&ignoreCVEsFlag,
+					&ignoreIDsFlag,
 					&ignoreStatesFlag,
 					&pipelineFlag,
 					&gitRepoFlag,
@@ -297,7 +297,7 @@ output and summaries to bucket configured for use.`,
 							return err
 						}
 					} else {
-						settings = app.NewScansSettings(metadata.Version, severity, ignoreCVEs.Value(), ignoreStates.Value())
+						settings = app.NewScansSettings(metadata.Version, severity, ignoreIDs.Value(), ignoreStates.Value())
 					}
 
 					// Print the settings if we're running in pipeline mode.
@@ -384,7 +384,7 @@ output and summaries to bucket configured for use.`,
 					}
 					runner := app.NewScanRunner(app.ScanRunnerConfig{
 						Severity:     severity,
-						IgnoreCVEs:   ignoreCVEs.Value(),
+						IgnoreCVEs:   ignoreIDs.Value(),
 						IgnoreStates: ignoreStates.Value(),
 						PipelineMode: pipeline,
 						Verbose:      verbose,
@@ -420,7 +420,7 @@ output and summaries to bucket configured for use.`,
 
 					// We're done, but first check to see if any defects or vulnerabilities
 					// meet or exceed the severity specified in the fail flag.
-					if checkFailed(scans, severity) {
+					if checkFailed(scans) {
 						return fmt.Errorf("%s severity %s threshold met or exceeded", metadata.Name, severity)
 					}
 					fmt.Printf("\n%s succeeded.\n", metadata.Name)
@@ -435,9 +435,9 @@ output and summaries to bucket configured for use.`,
 // Utility support
 // ----------------------------------------------------------------------------
 
-func checkFailed(scans []app.Scan, severity string) bool {
+func checkFailed(scans []app.Scan) bool {
 	for _, scan := range scans {
-		if scan.Failed(severity) {
+		if scan.Ok {
 			return true
 		}
 	}
@@ -492,12 +492,14 @@ func getConfigTable() table.Table {
 }
 
 func getScansTable(scans []app.Scan) table.Table {
-	tbl := table.New("Scan Tool", "Scan Type", "Scan Target", "Exit",
-		"Critical", "High", "Medium", "Low", "Negligible", "Unknown", "Error")
+	tbl := table.New("Scan Tool", "Scan Type", "Scan Target",
+		"Total", "Critical", "High", "Medium", "Low", "Negligible", "Unknown", "Ignored",
+		"Exit", "Error")
 	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
 	for _, scan := range scans {
-		tbl.AddRow(scan.Settings.ScanTool, scan.Settings.ScanType, scan.ScanTarget, scan.ExitCode,
-			scan.NumCritical, scan.NumHigh, scan.NumMedium, scan.NumLow, scan.NumNegligible, scan.NumUnknown, scan.Error)
+		tbl.AddRow(scan.Settings.ScanTool, scan.Settings.ScanType, scan.ScanTarget,
+			scan.NumTotal(), scan.NumCritical, scan.NumHigh, scan.NumMedium, scan.NumLow, scan.NumNegligible, scan.NumUnknown, scan.NumIgnored,
+			scan.ExitCode, scan.Error)
 	}
 	return tbl
 }

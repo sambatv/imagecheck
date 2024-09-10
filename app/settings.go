@@ -13,7 +13,7 @@ type ScansSettings struct {
 	AppVersion   string         `json:"appVersion"`
 	Disabled     bool           `json:"disabled"`
 	Severity     string         `json:"severity"`
-	IgnoreCVEs   []string       `json:"ignoreCVEs"`
+	IgnoreIDs    []string       `json:"ignoreIds"`
 	IgnoreStates []string       `json:"ignoreStates"`
 	Scans        []ScanSettings `json:"scans"`
 	dryRun       bool
@@ -38,7 +38,7 @@ func (s ScansSettings) FindScanSetting(scanTool, scanType string) ScanSettings {
 			setting.verbose = s.verbose
 			setting.pipelineMode = s.pipelineMode
 			setting.severity = s.Severity
-			setting.ignoreCVEs = s.IgnoreCVEs
+			setting.ignoreIDs = s.IgnoreIDs
 			setting.ignoreStates = s.IgnoreStates
 			return setting
 		}
@@ -54,17 +54,37 @@ type ScanSettings struct {
 	ScanType     string `json:"scanType"`
 	Disabled     bool   `json:"disabled"`
 	severity     string
-	ignoreCVEs   []string
+	ignoreIDs    []string
 	ignoreStates []string
 	dryRun       bool
 	verbose      bool
 	pipelineMode bool
 }
 
+// IsIgnoredID returns true if the CVE ID is ignored in settings.
+func (s ScanSettings) IsIgnoredID(id string) bool {
+	for _, ignoreID := range s.ignoreIDs {
+		if id == ignoreID {
+			return true
+		}
+	}
+	return false
+}
+
+// IsIgnoredState returns true if the state is ignored in settings.
+func (s ScanSettings) IsIgnoredState(state string) bool {
+	for _, ignoreState := range s.ignoreStates {
+		if state == ignoreState {
+			return true
+		}
+	}
+	return false
+}
+
 // NewScansSettings creates a new ScansSettings object.
-func NewScansSettings(appVersion, severity string, ignoreCVEs, ignoreStates []string) *ScansSettings {
-	if ignoreCVEs == nil {
-		ignoreCVEs = make([]string, 0)
+func NewScansSettings(appVersion, severity string, ignoreIDs, ignoreStates []string) *ScansSettings {
+	if ignoreIDs == nil {
+		ignoreIDs = make([]string, 0)
 	}
 	if ignoreStates == nil {
 		ignoreStates = make([]string, 0)
@@ -73,7 +93,7 @@ func NewScansSettings(appVersion, severity string, ignoreCVEs, ignoreStates []st
 		AppVersion:   appVersion,
 		Disabled:     false,
 		Severity:     severity,
-		IgnoreCVEs:   ignoreCVEs,
+		IgnoreIDs:    ignoreIDs,
 		IgnoreStates: ignoreStates,
 		Scans: []ScanSettings{
 			{

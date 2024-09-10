@@ -28,13 +28,13 @@ func (s TrivyScanner) Version() string {
 func (s TrivyScanner) Scan(target string, settings ScanSettings) Scan {
 	// Set output format to JSON in pipeline mode.
 	var outputOpt string
-	if settings.PipelineMode {
+	if settings.pipelineMode {
 		outputOpt = "--format=json"
 	}
 
 	// Set the failure severity option.
 	var severityOpt string
-	switch settings.Severity {
+	switch settings.severity {
 	case "critical":
 		severityOpt = "--severity=CRITICAL"
 	case "high":
@@ -79,7 +79,7 @@ func (s TrivyScanner) run(cmdline, target string, settings ScanSettings) Scan {
 		scan.Error = err.Error()
 		return scan
 	}
-	if settings.DryRun {
+	if settings.dryRun {
 		return scan
 	}
 

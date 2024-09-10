@@ -26,7 +26,7 @@ func (s TrufflehogScanner) Version() string {
 func (s TrufflehogScanner) Scan(target string, settings ScanSettings) Scan {
 	// Set output format to JSON in pipeline mode.
 	var outputOpt string
-	if settings.PipelineMode {
+	if settings.pipelineMode {
 		outputOpt = "--json"
 	} else {
 		outputOpt = "--no-json"
@@ -66,7 +66,7 @@ func (s TrufflehogScanner) run(cmdline, target string, settings ScanSettings) Sc
 		scan.Error = err.Error()
 		return scan
 	}
-	if settings.DryRun {
+	if settings.dryRun {
 		return scan
 	}
 

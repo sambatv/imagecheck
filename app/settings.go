@@ -6,11 +6,19 @@ import (
 	"path/filepath"
 )
 
-// ScansSettings represents the configuration settings for the application.
+// ScansSettings represents the configuration settings for the application,
+// some of which are not persisted to disk in JSON format, but are set at
+// runtime from the command line options.
 type ScansSettings struct {
-	AppVersion string         `json:"appVersion"`
-	Disabled   bool           `json:"disabled"`
-	Scans      []ScanSettings `json:"scans"`
+	AppVersion   string         `json:"appVersion"`
+	Disabled     bool           `json:"disabled"`
+	Severity     string         `json:"severity"`
+	IgnoreCVEs   []string       `json:"ignoreCVEs"`
+	IgnoreStates []string       `json:"ignoreStates"`
+	Scans        []ScanSettings `json:"scans"`
+	dryRun       bool
+	verbose      bool
+	pipelineMode bool
 }
 
 // ToJSON returns the JSON representation of a ScansSettings object.
@@ -26,6 +34,12 @@ func (s ScansSettings) ToJSON() (string, error) {
 func (s ScansSettings) FindScanSetting(scanTool, scanType string) ScanSettings {
 	for _, setting := range s.Scans {
 		if setting.ScanTool == scanTool && setting.ScanType == scanType {
+			setting.dryRun = s.dryRun
+			setting.verbose = s.verbose
+			setting.pipelineMode = s.pipelineMode
+			setting.severity = s.Severity
+			setting.ignoreCVEs = s.IgnoreCVEs
+			setting.ignoreStates = s.IgnoreStates
 			return setting
 		}
 	}
@@ -36,15 +50,15 @@ func (s ScansSettings) FindScanSetting(scanTool, scanType string) ScanSettings {
 // not persisted to disk in JSON format, but are set at runtime from the command
 // line options.
 type ScanSettings struct {
-	ScanTool     string   `json:"scanTool"`
-	ScanType     string   `json:"scanType"`
-	Severity     string   `json:"severity"`
-	Disabled     bool     `json:"disabled"`
-	IgnoreCVEs   []string `json:"ignoreCVEs"`
-	IgnoreStates []string `json:"ignoreStates"`
-	DryRun       bool
-	PipelineMode bool
-	Verbose      bool
+	ScanTool     string `json:"scanTool"`
+	ScanType     string `json:"scanType"`
+	Disabled     bool   `json:"disabled"`
+	severity     string
+	ignoreCVEs   []string
+	ignoreStates []string
+	dryRun       bool
+	verbose      bool
+	pipelineMode bool
 }
 
 // NewScansSettings creates a new ScansSettings object.
@@ -56,56 +70,41 @@ func NewScansSettings(appVersion, severity string, ignoreCVEs, ignoreStates []st
 		ignoreStates = make([]string, 0)
 	}
 	return &ScansSettings{
-		AppVersion: appVersion,
-		Disabled:   false,
+		AppVersion:   appVersion,
+		Disabled:     false,
+		Severity:     severity,
+		IgnoreCVEs:   ignoreCVEs,
+		IgnoreStates: ignoreStates,
 		Scans: []ScanSettings{
 			{
-				ScanTool:     "grype",
-				ScanType:     "files",
-				Disabled:     false,
-				IgnoreCVEs:   ignoreCVEs,
-				IgnoreStates: ignoreStates,
-				Severity:     severity,
+				ScanTool: "grype",
+				ScanType: "files",
+				Disabled: false,
 			},
 			{
-				ScanTool:     "trivy",
-				ScanType:     "config",
-				Disabled:     false,
-				IgnoreCVEs:   ignoreCVEs,
-				IgnoreStates: ignoreStates,
-				Severity:     severity,
+				ScanTool: "trivy",
+				ScanType: "config",
+				Disabled: false,
 			},
 			{
-				ScanTool:     "trivy",
-				ScanType:     "files",
-				Disabled:     false,
-				IgnoreCVEs:   ignoreCVEs,
-				IgnoreStates: ignoreStates,
-				Severity:     severity,
+				ScanTool: "trivy",
+				ScanType: "files",
+				Disabled: false,
 			},
 			{
-				ScanTool:     "trufflehog",
-				ScanType:     "files",
-				Disabled:     false,
-				IgnoreCVEs:   ignoreCVEs,
-				IgnoreStates: ignoreStates,
-				Severity:     severity,
+				ScanTool: "trufflehog",
+				ScanType: "files",
+				Disabled: false,
 			},
 			{
-				ScanTool:     "grype",
-				ScanType:     "image",
-				Disabled:     false,
-				IgnoreCVEs:   ignoreCVEs,
-				IgnoreStates: ignoreStates,
-				Severity:     severity,
+				ScanTool: "grype",
+				ScanType: "image",
+				Disabled: false,
 			},
 			{
-				ScanTool:     "trufflehog",
-				ScanType:     "image",
-				Disabled:     false,
-				IgnoreCVEs:   ignoreCVEs,
-				IgnoreStates: ignoreStates,
-				Severity:     severity,
+				ScanTool: "trufflehog",
+				ScanType: "image",
+				Disabled: false,
 			},
 		},
 	}

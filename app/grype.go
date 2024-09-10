@@ -28,7 +28,7 @@ func (s GrypeScanner) Version() string {
 func (s GrypeScanner) Scan(target string, settings ScanSettings) Scan {
 	// Set output format to JSON in pipeline mode.
 	var outputOpt string
-	if settings.PipelineMode {
+	if settings.pipelineMode {
 		outputOpt = "--output=json"
 	}
 
@@ -36,9 +36,9 @@ func (s GrypeScanner) Scan(target string, settings ScanSettings) Scan {
 	var cmdline string
 	switch settings.ScanType {
 	case "files":
-		cmdline = fmt.Sprintf("grype %s --fail-on=%s dir:%s", outputOpt, settings.Severity, target)
+		cmdline = fmt.Sprintf("grype %s --fail-on=%s dir:%s", outputOpt, settings.severity, target)
 	case "image":
-		cmdline = fmt.Sprintf("grype %s --fail-on=%s %s", outputOpt, settings.Severity, target)
+		cmdline = fmt.Sprintf("grype %s --fail-on=%s %s", outputOpt, settings.severity, target)
 	default:
 		return Scan{} // should never happen
 	}
@@ -66,7 +66,7 @@ func (s GrypeScanner) run(cmdline, target string, settings ScanSettings) Scan {
 		scan.Error = err.Error()
 		return scan
 	}
-	if settings.DryRun {
+	if settings.dryRun {
 		return scan
 	}
 

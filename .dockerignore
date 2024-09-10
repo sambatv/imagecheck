@@ -5,8 +5,8 @@ imagecheck
 # local imagecheck scans
 cache/
 
-# config files
-.imagecheck.json
+# imagecheck scan settings files
+*imagecheck*.settings.json
 
 # markdown files
 *.md

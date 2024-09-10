@@ -281,6 +281,7 @@ output and summaries to bucket configured for use.`,
 					// create a new settings object.
 					var settings *app.ScanSettings
 					if fileExists(settingsFile) {
+						fmt.Printf("Loading settings from %s ...\n", settingsFile)
 						settings, err = app.LoadSettings(settingsFile)
 						if err != nil {
 							return err

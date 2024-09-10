@@ -172,6 +172,6 @@ else ifneq ($(DIRTY),)
 else
 	@echo
 	@echo 'releasing $(APP_NAME) ...'
-	@echo git tag -a v$(APP_VERSION) -m "Release v$(APP_VERSION)"
-	@echo git push origin v$(APP_VERSION)
+	echo git tag -a v$(APP_VERSION) -m "Release v$(APP_VERSION)"
+	echo git push origin v$(APP_VERSION)
 endif

@@ -83,13 +83,21 @@ var severityFlag = cli.StringFlag{
 	Category:    "Scanning",
 }
 
-var ignore cli.StringSlice
-var ignoreFlag = cli.StringSliceFlag{
-	Name:        "ignore",
-	Aliases:     []string{"i"},
-	Destination: &ignore,
+var ignoreCVEs cli.StringSlice
+var ignoreCVEsFlag = cli.StringSliceFlag{
+	Name:        "ignore-cve",
+	Destination: &ignoreCVEs,
+	Usage:       "ignore defects or vulnerabilities with any of the CVE ids",
+	EnvVars:     []string{fmt.Sprintf("%s_IGNORECVES", strings.ToUpper(metadata.Name))},
+	Category:    "Scanning",
+}
+
+var ignoreStates cli.StringSlice
+var ignoreStatesFlag = cli.StringSliceFlag{
+	Name:        "ignore-state",
+	Destination: &ignoreStates,
 	Usage:       "ignore defects or vulnerabilities with any of the specified fix states",
-	EnvVars:     []string{fmt.Sprintf("%s_IGNORE", strings.ToUpper(metadata.Name))},
+	EnvVars:     []string{fmt.Sprintf("%s_IGNORESTATES", strings.ToUpper(metadata.Name))},
 	Category:    "Scanning",
 }
 
@@ -167,7 +175,7 @@ func New() *cli.App {
 				Flags: []cli.Flag{
 					&settingsFileFlag,
 					&severityFlag,
-					&ignoreFlag,
+					&ignoreStatesFlag,
 				},
 				Action: func(c *cli.Context) error {
 					if c.NArg() > 0 {
@@ -177,7 +185,7 @@ func New() *cli.App {
 						return fmt.Errorf("settings file exists: %s", settingsFile)
 					}
 
-					settings := app.NewSettings(metadata.Version, severity, ignore.Value())
+					settings := app.NewSettings(metadata.Version, severity, ignoreCVEs.Value(), ignoreStates.Value())
 					if err := app.SaveSettings(settings, settingsFile); err != nil {
 						return err
 					}
@@ -266,7 +274,8 @@ output and summaries to bucket configured for use.`,
 					&dryRunFlag,
 					&verboseFlag,
 					&severityFlag,
-					&ignoreFlag,
+					&ignoreCVEsFlag,
+					&ignoreStatesFlag,
 					&pipelineFlag,
 					&gitRepoFlag,
 					&buildIdFlag,
@@ -287,7 +296,7 @@ output and summaries to bucket configured for use.`,
 							return err
 						}
 					} else {
-						settings = app.NewSettings(metadata.Version, severity, ignore.Value())
+						settings = app.NewSettings(metadata.Version, severity, ignoreCVEs.Value(), ignoreStates.Value())
 					}
 
 					// Ensure application is not disabled in settings.
@@ -306,7 +315,7 @@ output and summaries to bucket configured for use.`,
 					}
 
 					// Ensure ignore states are valid.
-					for _, ignoreState := range ignore.Value() {
+					for _, ignoreState := range ignoreStates.Value() {
 						if ignoreState != "" && !isValidIgnoreState(ignoreState) {
 							return fmt.Errorf("invalid ignore state: %s. Chose one of %s", ignoreState, strings.Join(validIgnoreStates, ", "))
 						}
@@ -365,7 +374,7 @@ output and summaries to bucket configured for use.`,
 					}
 					runner := app.NewScanRunner(app.ScanRunnerConfig{
 						Severity:     severity,
-						Ignore:       ignore.Value(),
+						Ignore:       ignoreStates.Value(),
 						PipelineMode: pipeline,
 						Verbose:      verbose,
 						DryRun:       dryRun,
@@ -461,7 +470,7 @@ func getConfigTable() table.Table {
 	tbl.AddRow("Dry Run", dryRun)
 	tbl.AddRow("Verbose", verbose)
 	tbl.AddRow("Severity", severity)
-	tbl.AddRow("Ignore ", strings.Join(ignore.Value(), ", "))
+	tbl.AddRow("IgnoreStates ", strings.Join(ignoreStates.Value(), ", "))
 	tbl.AddRow("Pipeline", pipeline)
 	tbl.AddRow("Git Repo", gitRepo)
 	tbl.AddRow("Build Id", buildId)

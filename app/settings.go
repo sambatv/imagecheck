@@ -17,63 +17,74 @@ type ScanSettings struct {
 
 // ScanSetting represents the settings for a specific scan.
 type ScanSetting struct {
-	Disabled bool     `json:"disabled"`
-	ScanTool string   `json:"scanTool"`
-	ScanType string   `json:"scanType"`
-	Ignore   []string `json:"ignore"`
-	Severity string   `json:"severity"`
+	Disabled     bool     `json:"disabled"`
+	ScanTool     string   `json:"scanTool"`
+	ScanType     string   `json:"scanType"`
+	IgnoreCVEs   []string `json:"ignoreCVEs"`
+	IgnoreStates []string `json:"ignoreStates"`
+	Severity     string   `json:"severity"`
 }
 
 // NewSettings creates a new ScanSettings object.
-func NewSettings(appVersion, severity string, ignore []string) *ScanSettings {
-	if ignore == nil {
-		ignore = make([]string, 0)
+func NewSettings(appVersion, severity string, ignoreCVEs, ignoreStates []string) *ScanSettings {
+	if ignoreCVEs == nil {
+		ignoreCVEs = make([]string, 0)
+	}
+	if ignoreStates == nil {
+		ignoreStates = make([]string, 0)
 	}
 	return &ScanSettings{
 		AppVersion: appVersion,
 		InitTime:   time.Now().Format(time.RFC3339),
+		Disabled:   false,
 		Scans: []ScanSetting{
 			{
-				ScanTool: "grype",
-				ScanType: "files",
-				Disabled: false,
-				Ignore:   ignore,
-				Severity: severity,
+				ScanTool:     "grype",
+				ScanType:     "files",
+				Disabled:     false,
+				IgnoreCVEs:   ignoreCVEs,
+				IgnoreStates: ignoreStates,
+				Severity:     severity,
 			},
 			{
-				ScanTool: "trivy",
-				ScanType: "config",
-				Disabled: false,
-				Ignore:   ignore,
-				Severity: severity,
+				ScanTool:     "trivy",
+				ScanType:     "config",
+				Disabled:     false,
+				IgnoreCVEs:   ignoreCVEs,
+				IgnoreStates: ignoreStates,
+				Severity:     severity,
 			},
 			{
-				ScanTool: "trivy",
-				ScanType: "files",
-				Disabled: false,
-				Ignore:   ignore,
-				Severity: severity,
+				ScanTool:     "trivy",
+				ScanType:     "files",
+				Disabled:     false,
+				IgnoreCVEs:   ignoreCVEs,
+				IgnoreStates: ignoreStates,
+				Severity:     severity,
 			},
 			{
-				ScanTool: "trufflehog",
-				ScanType: "files",
-				Disabled: false,
-				Ignore:   ignore,
-				Severity: severity,
+				ScanTool:     "trufflehog",
+				ScanType:     "files",
+				Disabled:     false,
+				IgnoreCVEs:   ignoreCVEs,
+				IgnoreStates: ignoreStates,
+				Severity:     severity,
 			},
 			{
-				ScanTool: "grype",
-				ScanType: "image",
-				Disabled: false,
-				Ignore:   ignore,
-				Severity: severity,
+				ScanTool:     "grype",
+				ScanType:     "image",
+				Disabled:     false,
+				IgnoreCVEs:   ignoreCVEs,
+				IgnoreStates: ignoreStates,
+				Severity:     severity,
 			},
 			{
-				ScanTool: "trufflehog",
-				ScanType: "image",
-				Disabled: false,
-				Ignore:   ignore,
-				Severity: severity,
+				ScanTool:     "trufflehog",
+				ScanType:     "image",
+				Disabled:     false,
+				IgnoreCVEs:   ignoreCVEs,
+				IgnoreStates: ignoreStates,
+				Severity:     severity,
 			},
 		},
 	}

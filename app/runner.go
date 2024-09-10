@@ -36,7 +36,7 @@ func (r ScanRunner) Scan(image string) []Scan {
 
 	scans := make([]Scan, 0)
 	for _, setting := range r.cfg.Settings.Scans {
-		if setting.Disabled {
+		if setting.Disabled || setting.ScanType == "image" && image == "" {
 			continue
 		}
 		scanTarget := currentDir

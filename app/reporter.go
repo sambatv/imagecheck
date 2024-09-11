@@ -161,6 +161,7 @@ func uploadS3Object(bucket, key, filePath string) error {
 	// Create an S3 uploader and upload the file.
 	client := s3.NewFromConfig(cfg)
 	uploader := manager.NewUploader(client)
+	fmt.Printf("uploading: s3://%s/%s\n", bucket, key)
 	if _, err = uploader.Upload(context.TODO(), &s3.PutObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),

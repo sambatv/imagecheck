@@ -1,6 +1,5 @@
 # build output
 bin/
-imagecheck
 
 # local imagecheck scans
 cache/

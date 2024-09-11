@@ -4,21 +4,22 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 )
 
 // ScansSettings represents the configuration settings for the application,
 // some of which are not persisted to disk in JSON format, but are set at
 // runtime from the command line options.
 type ScansSettings struct {
-	AppVersion   string         `json:"appVersion"`
-	Disabled     bool           `json:"disabled"`
-	Severity     string         `json:"severity"`
-	IgnoreIDs    []string       `json:"ignoreIds"`
-	IgnoreStates []string       `json:"ignoreStates"`
-	Scans        []ScanSettings `json:"scans"`
-	dryRun       bool
-	verbose      bool
-	pipelineMode bool
+	AppVersion      string          `json:"appVersion"`
+	Disabled        bool            `json:"disabled"`
+	Severity        string          `json:"severity"`
+	IgnoreIDs       []string        `json:"ignoreIds"`
+	IgnoreFixStates []string        `json:"ignoreFixStates"`
+	ScanSettings    []*ScanSettings `json:"scanSettings"`
+	dryRun          bool
+	verbose         bool
+	pipelineMode    bool
 }
 
 // ToJSON returns the JSON representation of a ScansSettings object.
@@ -31,54 +32,57 @@ func (s ScansSettings) ToJSON() (string, error) {
 }
 
 // FindScanSetting finds a specific scan setting by scan tool and scan type.
-func (s ScansSettings) FindScanSetting(scanTool, scanType string) ScanSettings {
-	for _, setting := range s.Scans {
+func (s ScansSettings) FindScanSetting(scanTool, scanType string) *ScanSettings {
+	for _, setting := range s.ScanSettings {
 		if setting.ScanTool == scanTool && setting.ScanType == scanType {
 			setting.dryRun = s.dryRun
 			setting.verbose = s.verbose
 			setting.pipelineMode = s.pipelineMode
 			setting.severity = s.Severity
 			setting.ignoreIDs = s.IgnoreIDs
-			setting.ignoreStates = s.IgnoreStates
+			setting.ignoreFixStates = s.IgnoreFixStates
 			return setting
 		}
 	}
-	return ScanSettings{}
+	return nil
+}
+
+// EnabledScanTools returns a list of enabled ScanTool objects.
+func (s ScansSettings) EnabledScanTools() map[string]ScanTool {
+	scanners := make(map[string]ScanTool)
+	for _, scanSetting := range s.ScanSettings {
+		if scanSetting.Disabled {
+			continue
+		}
+		tool := scanToolsRegistry[scanSetting.ScanTool]
+		scanners[scanSetting.ScanTool] = tool
+	}
+	return scanners
 }
 
 // ScanSettings represents the settings for a specific scan, some of which are
 // not persisted to disk in JSON format, but are set at runtime from the command
 // line options.
 type ScanSettings struct {
-	ScanTool     string `json:"scanTool"`
-	ScanType     string `json:"scanType"`
-	Disabled     bool   `json:"disabled"`
-	severity     string
-	ignoreIDs    []string
-	ignoreStates []string
-	dryRun       bool
-	verbose      bool
-	pipelineMode bool
+	ScanTool        string `json:"scanTool"`
+	ScanType        string `json:"scanType"`
+	Disabled        bool   `json:"disabled"`
+	severity        string
+	ignoreIDs       []string
+	ignoreFixStates []string
+	dryRun          bool
+	verbose         bool
+	pipelineMode    bool
 }
 
 // IsIgnoredID returns true if the CVE ID is ignored in settings.
 func (s ScanSettings) IsIgnoredID(id string) bool {
-	for _, ignoreID := range s.ignoreIDs {
-		if id == ignoreID {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(s.ignoreIDs, id)
 }
 
-// IsIgnoredState returns true if the state is ignored in settings.
-func (s ScanSettings) IsIgnoredState(state string) bool {
-	for _, ignoreState := range s.ignoreStates {
-		if state == ignoreState {
-			return true
-		}
-	}
-	return false
+// IsIgnoredFixState returns true if the fix state is ignored in settings.
+func (s ScanSettings) IsIgnoredFixState(state string) bool {
+	return slices.Contains(s.ignoreFixStates, state)
 }
 
 // NewScansSettings creates a new ScansSettings object.
@@ -90,32 +94,12 @@ func NewScansSettings(appVersion, severity string, ignoreIDs, ignoreStates []str
 		ignoreStates = make([]string, 0)
 	}
 	return &ScansSettings{
-		AppVersion:   appVersion,
-		Disabled:     false,
-		Severity:     severity,
-		IgnoreIDs:    ignoreIDs,
-		IgnoreStates: ignoreStates,
-		Scans: []ScanSettings{
-			{
-				ScanTool: "grype",
-				ScanType: "files",
-				Disabled: false,
-			},
-			{
-				ScanTool: "trivy",
-				ScanType: "config",
-				Disabled: false,
-			},
-			{
-				ScanTool: "trivy",
-				ScanType: "files",
-				Disabled: false,
-			},
-			{
-				ScanTool: "trufflehog",
-				ScanType: "files",
-				Disabled: false,
-			},
+		AppVersion:      appVersion,
+		Disabled:        false,
+		Severity:        severity,
+		IgnoreIDs:       ignoreIDs,
+		IgnoreFixStates: ignoreStates,
+		ScanSettings: []*ScanSettings{
 			{
 				ScanTool: "grype",
 				ScanType: "image",

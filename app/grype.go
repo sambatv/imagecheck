@@ -26,7 +26,7 @@ func (s GrypeScanner) Version() string {
 }
 
 // Scan scans a target for a type of defect or vulnerability with grype.
-func (s GrypeScanner) Scan(target string, settings ScanSettings) Scan {
+func (s GrypeScanner) Scan(target string, settings *ScanSettings) *Scan {
 	// Set output format to JSON in pipeline mode.
 	var outputOpt string
 	if settings.pipelineMode {
@@ -41,33 +41,29 @@ func (s GrypeScanner) Scan(target string, settings ScanSettings) Scan {
 	case "image":
 		cmdline = fmt.Sprintf("grype %s --fail-on=%s %s", outputOpt, settings.severity, target)
 	default:
-		return Scan{} // should never happen
+		return &Scan{} // should never happen
 	}
 	return s.run(cmdline, target, settings)
 }
 
-func (s GrypeScanner) run(cmdline, target string, settings ScanSettings) Scan {
+func (s GrypeScanner) run(cmdline, target string, settings *ScanSettings) *Scan {
 	// Execute the scanner command line and calculate the duration.
 	beginTime := time.Now()
 	exitCode, stdout, err := execScanner(cmdline, settings)
 	durationSecs := time.Since(beginTime).Seconds()
 
 	// Create a new scan object to return.
-	scan := Scan{
-		Settings:     settings,
-		ScanTarget:   target,
-		CommandLine:  cmdline,
-		DurationSecs: durationSecs,
-		ExitCode:     exitCode,
-		stdout:       stdout,
-	}
+	scan := NewScan(settings, target, cmdline, durationSecs, exitCode, stdout)
 
-	// If there was an error or is a dry run, there's nothing more to do.
+	// If there was an error, is a dry run, or is in pipeline mode, there's nothing more to do.
 	if err != nil {
 		scan.Error = err.Error()
 		return scan
 	}
 	if settings.dryRun {
+		return scan
+	}
+	if !settings.pipelineMode {
 		return scan
 	}
 
@@ -79,11 +75,13 @@ func (s GrypeScanner) run(cmdline, target string, settings ScanSettings) Scan {
 	}
 
 	// Count the number of vulnerabilities by severity.
+	numFailures := 0
 	matches := data["matches"].([]interface{})
 	if settings.pipelineMode || settings.verbose {
 		fmt.Printf("num vulnerabilities: %d\n", len(matches))
 	}
-	for _, match := range matches {
+	for i, match := range matches {
+		i += 1
 		vulnerability := match.(map[string]any)["vulnerability"].(map[string]any)
 
 		// Score the vulnerability based on its severity.
@@ -94,30 +92,35 @@ func (s GrypeScanner) run(cmdline, target string, settings ScanSettings) Scan {
 		// Test if vulnerability id is ignored.
 		id := vulnerability["id"].(string)
 		if settings.verbose || settings.pipelineMode {
-			fmt.Printf("vulnerability: id=%s, severity=%s\n", id, severity)
+			fmt.Printf("vulnerability %d: id=%s, severity=%s\n", i, id, severity)
 		}
 		if settings.IsIgnoredID(id) {
 			scan.NumIgnored++
 			if settings.verbose || settings.pipelineMode {
-				fmt.Printf("ignoring id: id=%s, severity=%s\n", id, severity)
+				fmt.Printf("vulnerability %d: ignoring id %s\n", i, id)
 			}
+			scan.Ok = true // ignored id does not fail the scan
 			continue
 		}
 
 		// Test if vulnerability fix state is ignored.
 		fix := vulnerability["fix"].(map[string]any)
-		state := fix["state"].(string)
-		state = strings.ToLower(state)
-		if settings.IsIgnoredState(state) {
+		fixState := fix["state"].(string)
+		fixState = strings.ToLower(fixState)
+		if settings.IsIgnoredFixState(fixState) {
 			scan.NumIgnored++
 			if settings.verbose || settings.pipelineMode {
-				fmt.Printf("ignoring state: id=%s, severity=%s, state=%s\n", id, severity, state)
+				fmt.Printf("vulnerability %d: ignoring fix state %s\n", i, fixState)
 			}
+			scan.Ok = true // ignored fix state does not fail the scan
 			continue
 		}
 
 		// If not ignored, the scan is ok if the severity is below the failure threshold.
-		scan.Ok = !scan.Failed()
+		if scan.Failed() {
+			numFailures++
+		}
 	}
+	scan.Ok = numFailures == 0
 	return scan
 }

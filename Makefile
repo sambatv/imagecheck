@@ -102,12 +102,6 @@ lint: ## Lint the application
 	@echo 'linting $(APP_NAME) ...'
 	go vet ./...
 
-.PHONY: scan
-scan: build ## Scan the application for defects and vulnerabilities
-	@echo
-	@echo 'scanning $(APP_NAME) ...'
-	./bin/$(APP_NAME) scan
-
 .PHONY: test
 test: ## Run the application tests
 	@echo
@@ -142,20 +136,6 @@ image-scan: build ## Scan the container image for defects and vulnerabilities
 	@echo
 	@echo 'scanning image $(IMAGE) ...'
 	./bin/$(APP_NAME) scan --force $(IMAGE)
-
-.PHONY: image-push
-image-push: ## Push the container image
-	@echo
-	@echo 'logging into $(REGISTRY_HOSTNAME) registry with personal access token set in $CR_PATH ...'
-	echo $CR_PAT | docker login ghcr.io -u USERNAME --password-stdin
-	@echo
-	@echo 'pushing image $(IMAGE)'
-	docker push $(IMAGE)
-ifneq ($(RELEASE),)
-	@echo
-	@echo 'pushing versioned image $(IMAGE_VERSIONED) ...'
-	docker push $(IMAGE_VERSIONED)
-endif
 
 ##@ Release targets
 

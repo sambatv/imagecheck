@@ -30,8 +30,8 @@ func NewScanRunner(config ScanRunnerConfig) *ScanRunner {
 }
 
 // Scan runs the scans and returns their results.
-func (r ScanRunner) Scan(image string) []Scan {
-	runScan := func(scanTool, scanType, scanTarget string) Scan {
+func (r ScanRunner) Scan(image string) []*Scan {
+	runScan := func(scanTool, scanType, scanTarget string) *Scan {
 		// Find the scan settings from those loaded from the settings file.
 		scanSettings := r.cfg.Settings.FindScanSetting(scanTool, scanType)
 
@@ -42,29 +42,27 @@ func (r ScanRunner) Scan(image string) []Scan {
 		scanSettings.verbose = r.cfg.Verbose
 
 		// Run the scan.
-		return ScanTools[scanTool].Scan(scanTarget, scanSettings)
+		return scanToolsRegistry[scanTool].Scan(scanTarget, scanSettings)
 	}
 
-	// Run scans based on scan settings and image argument (or lack thereof).
-	scans := make([]Scan, 0)
-	for _, setting := range r.cfg.Settings.Scans {
+	// Run scans based on scan settings.
+	scans := make([]*Scan, 0)
+	for _, setting := range r.cfg.Settings.ScanSettings {
+		// Skip scan if disabled in settings.
 		if setting.Disabled {
 			if r.cfg.Verbose {
 				fmt.Printf("skipping disabled scan: %s %s\n", setting.ScanTool, setting.ScanType)
 			}
 			continue
 		}
-		if (setting.ScanType == "image" && image == "") || setting.ScanType != "image" && image != "" {
-			continue
-		}
 
-		// Determine the scan target.
+		// Otherwise, determine the scan target.
 		scanTarget := currentDir
 		if setting.ScanType == "image" {
 			scanTarget = image
 		}
 
-		// Run the scan and append it to the scans results being returned.
+		// Then run the scan and append its result to the scan results being returned.
 		scans = append(scans, runScan(setting.ScanTool, setting.ScanType, scanTarget))
 	}
 	return scans
@@ -73,21 +71,21 @@ func (r ScanRunner) Scan(image string) []Scan {
 // ScanTool defines behaviors for a scanner application used to scan a target for a type of defect or vulnerability.
 type ScanTool interface {
 	// Scan scans a target for a type of defect or vulnerability.
-	Scan(target string, settings ScanSettings) Scan
+	Scan(target string, settings *ScanSettings) *Scan
 
 	// Version returns the version of the scanner application.
 	Version() string
 }
 
-// ScanTools is a map of scanners by name.
-var ScanTools = map[string]ScanTool{
+// scanToolsRegistry is a registry of ScanTool objects mapped by name.
+var scanToolsRegistry = map[string]ScanTool{
 	"grype":      &GrypeScanner{},
 	"trivy":      &TrivyScanner{},
 	"trufflehog": &TrufflehogScanner{},
 }
 
 // execScanner executes a scan tool command line per its settings and returns its exit code, stdout and stderr.
-func execScanner(cmdline string, settings ScanSettings) (int, []byte, error) {
+func execScanner(cmdline string, settings *ScanSettings) (int, []byte, error) {
 	if settings.dryRun {
 		fmt.Println(cmdline)
 		return 0, []byte{}, nil

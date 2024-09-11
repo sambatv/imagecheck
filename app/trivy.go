@@ -25,7 +25,7 @@ func (s TrivyScanner) Version() string {
 }
 
 // Scan scans a target for a type of defect or vulnerability with trivy.
-func (s TrivyScanner) Scan(target string, settings ScanSettings) Scan {
+func (s TrivyScanner) Scan(target string, settings *ScanSettings) *Scan {
 	// Set output format to JSON in pipeline mode.
 	var outputOpt string
 	if settings.pipelineMode {
@@ -53,26 +53,19 @@ func (s TrivyScanner) Scan(target string, settings ScanSettings) Scan {
 	case "files":
 		cmdline = fmt.Sprintf("trivy filesystem %s %s %s", severityOpt, outputOpt, target)
 	default:
-		return Scan{} // should never happen
+		return &Scan{} // should never happen
 	}
 	return s.run(cmdline, target, settings)
 }
 
-func (s TrivyScanner) run(cmdline, target string, settings ScanSettings) Scan {
+func (s TrivyScanner) run(cmdline, target string, settings *ScanSettings) *Scan {
 	// Execute the scanner command line and calculate the duration.
 	beginTime := time.Now()
 	exitCode, stdout, err := execScanner(cmdline, settings)
 	durationSecs := time.Since(beginTime).Seconds()
 
 	// Create a new scan object to return.
-	scan := Scan{
-		Settings:     settings,
-		ScanTarget:   target,
-		CommandLine:  cmdline,
-		DurationSecs: durationSecs,
-		ExitCode:     exitCode,
-		stdout:       stdout,
-	}
+	scan := NewScan(settings, target, cmdline, durationSecs, exitCode, stdout)
 
 	// If there was an error or is a dry run, there's nothing more to do.
 	if err != nil {

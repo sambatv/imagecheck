@@ -23,7 +23,7 @@ func (s TrufflehogScanner) Version() string {
 }
 
 // Scan scans a target for a type of defect or vulnerability with trufflehog.
-func (s TrufflehogScanner) Scan(target string, settings ScanSettings) Scan {
+func (s TrufflehogScanner) Scan(target string, settings *ScanSettings) *Scan {
 	// Set output format to JSON in pipeline mode.
 	var outputOpt string
 	if settings.pipelineMode {
@@ -40,28 +40,21 @@ func (s TrufflehogScanner) Scan(target string, settings ScanSettings) Scan {
 	case "image":
 		cmdline = fmt.Sprintf("trufflehog --fail %s docker --image=%s", outputOpt, target)
 	default:
-		return Scan{} // should never happen
+		return &Scan{} // should never happen
 	}
 	return s.run(cmdline, target, settings)
 }
 
-func (s TrufflehogScanner) run(cmdline, target string, settings ScanSettings) Scan {
+func (s TrufflehogScanner) run(cmdline, target string, settings *ScanSettings) *Scan {
 	// Execute the scanner command line and calculate the duration.
 	beginTime := time.Now()
 	exitCode, stdout, err := execScanner(cmdline, settings)
 	durationSecs := time.Since(beginTime).Seconds()
 
 	// Create a new scan object to return.
-	scan := Scan{
-		Settings:     settings,
-		ScanTarget:   target,
-		CommandLine:  cmdline,
-		DurationSecs: durationSecs,
-		ExitCode:     exitCode,
-		stdout:       wrapJSONArray(stdout),
-	}
+	scan := NewScan(settings, target, cmdline, durationSecs, exitCode, stdout)
 
-	// If there was an error or is a dry run, there's nothing more to do.
+	// If there was an error, is a dry run, or is in pipeline mode, there's nothing more to do.
 	if err != nil {
 		scan.Error = err.Error()
 		return scan
@@ -69,8 +62,12 @@ func (s TrufflehogScanner) run(cmdline, target string, settings ScanSettings) Sc
 	if settings.dryRun {
 		return scan
 	}
+	if !settings.pipelineMode {
+		return scan
+	}
 
 	// Otherwise, parse the JSON output to get the number of vulnerabilities.
+	scan.stdout = wrapJSONArray(scan.stdout)
 	var data []any
 	if err := json.Unmarshal(scan.stdout, &data); err != nil {
 		scan.Error = err.Error()
@@ -80,6 +77,7 @@ func (s TrufflehogScanner) run(cmdline, target string, settings ScanSettings) Sc
 	// Count the number of objects in output. With trufflehog, every object is a
 	// vulnerability, which we will score as a critical vulnerability.
 	scan.NumCritical = len(data)
+	scan.Ok = scan.NumCritical == 0
 	return scan
 }
 

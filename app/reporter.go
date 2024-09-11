@@ -38,7 +38,7 @@ func NewScanReporter(config ScanReporterConfig) *ScanReporter {
 }
 
 // Report reports the results of scans.
-func (r ScanReporter) Report(scans []Scan, timestamp time.Time) error {
+func (r ScanReporter) Report(scanTools map[string]ScanTool, scans []*Scan, timestamp time.Time) error {
 	// Ensure the cache directory exists.
 	if err := ensureDir(r.cfg.CacheDir); err != nil {
 		return err
@@ -60,7 +60,7 @@ func (r ScanReporter) Report(scans []Scan, timestamp time.Time) error {
 	}
 
 	// Cache the scan summary.
-	summary := NewSummary(scans, timestamp)
+	summary := NewSummary(scanTools, scans, timestamp)
 	if err := r.CacheSummary(summary); err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func (r ScanReporter) CachePath(filename string) string {
 }
 
 // CacheScan caches the scan output to a local file.
-func (r ScanReporter) CacheScan(scan Scan) error {
+func (r ScanReporter) CacheScan(scan *Scan) error {
 	// Add the S3 URL to the scan for output in report.
 	cachePath := r.CachePath(scanPath(scan))
 	fmt.Printf("caching scan: %s\n", cachePath)
@@ -122,7 +122,7 @@ func (r ScanReporter) S3Key(filename string) string {
 }
 
 // UploadScan uploads the scan cache file to S3.
-func (r ScanReporter) UploadScan(scan Scan) error {
+func (r ScanReporter) UploadScan(scan *Scan) error {
 	filePath := scanPath(scan)
 	srcPath := r.CachePath(filePath)
 	dstKey := r.S3Key(filePath)
@@ -178,15 +178,15 @@ type Summary struct {
 	Username     string            `json:"username"`
 	Timestamp    string            `json:"timestamp"`
 	DurationSecs float64           `json:"durationSecs"`
-	ScanTools    map[string]string `json:"scanTools"`
-	Scans        []Scan            `json:"scans"`
+	ToolVersions map[string]string `json:"toolVersions"`
+	Scans        []*Scan           `json:"scans"`
 }
 
 // NewSummary creates a new Summary report.
-func NewSummary(scans []Scan, timestamp time.Time) Summary {
-	scanTools := make(map[string]string)
-	for name, scanTool := range ScanTools {
-		scanTools[name] = scanTool.Version()
+func NewSummary(scanTools map[string]ScanTool, scans []*Scan, timestamp time.Time) Summary {
+	toolVersions := make(map[string]string, len(scanTools))
+	for name, scanTool := range scanTools {
+		toolVersions[name] = scanTool.Version()
 	}
 	return Summary{
 		Version:      metadata.Version,
@@ -194,13 +194,13 @@ func NewSummary(scans []Scan, timestamp time.Time) Summary {
 		Username:     metadata.Username,
 		Timestamp:    timestamp.Format(time.RFC3339),
 		DurationSecs: time.Since(timestamp).Seconds(),
-		ScanTools:    scanTools,
+		ToolVersions: toolVersions,
 		Scans:        scans,
 	}
 }
 
 // scanPath returns the path of the scan output file.
-func scanPath(s Scan) string {
+func scanPath(s *Scan) string {
 	const fileName = "scan.json"
 	if s.Settings.ScanType == "image" {
 		return filepath.Join(s.Settings.ScanTool, s.Settings.ScanType, s.ScanTarget, fileName)

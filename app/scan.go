@@ -4,43 +4,56 @@ import "strings"
 
 // Scan represents the results of a scan.
 type Scan struct {
-	Settings      ScanSettings `json:"scanSettings"`
-	ScanTarget    string       `json:"scanTarget"`
-	CommandLine   string       `json:"commandLine"`
-	DurationSecs  float64      `json:"durationSecs"`
-	Error         string       `json:"error"`
-	ExitCode      int          `json:"exitCode"`
-	Ok            bool         `json:"ok"`
-	NumCritical   int          `json:"numCritical"`
-	NumHigh       int          `json:"numHigh"`
-	NumMedium     int          `json:"numMedium"`
-	NumLow        int          `json:"numLow"`
-	NumNegligible int          `json:"numNegligible"`
-	NumUnknown    int          `json:"numUnknown"`
-	NumIgnored    int          `json:"numIgnored"`
-	S3URL         string       `json:"s3URL"`
+	Settings      *ScanSettings `json:"scanSettings"`
+	ScanTarget    string        `json:"scanTarget"`
+	CommandLine   string        `json:"commandLine"`
+	DurationSecs  float64       `json:"durationSecs"`
+	Error         string        `json:"error"`
+	ExitCode      int           `json:"exitCode"`
+	Ok            bool          `json:"ok"`
+	NumCritical   int           `json:"numCritical"`
+	NumHigh       int           `json:"numHigh"`
+	NumMedium     int           `json:"numMedium"`
+	NumLow        int           `json:"numLow"`
+	NumNegligible int           `json:"numNegligible"`
+	NumUnknown    int           `json:"numUnknown"`
+	NumIgnored    int           `json:"numIgnored"`
+	S3URL         string        `json:"s3URL"`
 	stdout        []byte
+}
+
+// NewScan creates a new Scan object.
+func NewScan(settings *ScanSettings, target, cmdline string, durationSecs float64, exitCode int, stdout []byte) *Scan {
+	return &Scan{
+		Settings:     settings,
+		ScanTarget:   target,
+		CommandLine:  cmdline,
+		DurationSecs: durationSecs,
+		ExitCode:     exitCode,
+		stdout:       stdout,
+	}
 }
 
 // Failed returns true if the scan failed severity threshold.
 func (s *Scan) Failed() bool {
-	switch strings.ToLower(s.Settings.severity) {
+	var failed bool
+	switch s.Settings.severity {
 	case "critical":
-		return s.NumCritical > 0
+		failed = (s.NumCritical) > 0
 	case "high":
-		return s.NumHigh+s.NumCritical > 0
+		failed = (s.NumHigh + s.NumCritical) > 0
 	case "medium":
-		return s.NumMedium+s.NumHigh+s.NumCritical > 0
+		failed = (s.NumMedium + s.NumHigh + s.NumCritical) > 0
 	case "low":
-		return s.NumLow+s.NumMedium+s.NumHigh+s.NumCritical > 0
-	default:
-		return false
+		failed = (s.NumLow + s.NumMedium + s.NumHigh + s.NumCritical) > 0
 	}
+	return failed
 }
 
 // Score scores the scan based on the severity of the vulnerability.
 func (s *Scan) Score(severity string) {
-	switch strings.ToLower(severity) {
+	severity = strings.ToLower(severity)
+	switch severity {
 	case "critical":
 		s.NumCritical++
 	case "high":

@@ -23,9 +23,9 @@ const (
 )
 
 var (
-	defaultSettingsFile = fmt.Sprintf(".%s.settings.json", metadata.Name)
-	validSeverities     = []string{"critical", "high", "medium", "low"}
-	validIgnoreStates   = []string{"fixed", "not-fixed", "wont-fix", "unknown"}
+	defaultSettingsFile  = fmt.Sprintf(".%s.settings.json", metadata.Name)
+	validSeverities      = []string{"critical", "high", "medium", "low"}
+	validIgnoreFixStates = []string{"fixed", "not-fixed", "wont-fix", "unknown"}
 )
 
 // ----------------------------------------------------------------------------
@@ -83,21 +83,30 @@ var severityFlag = cli.StringFlag{
 	Category:    "Scanning",
 }
 
+var ignoreSettings bool
+var ignoreSettingsFlag = cli.BoolFlag{
+	Name:        "ignore-settings",
+	Usage:       "ignore settings file and use default settings",
+	Destination: &ignoreSettings,
+	EnvVars:     []string{fmt.Sprintf("%s_IGNORESETTINGS", strings.ToUpper(metadata.Name))},
+	Category:    "Scanning",
+}
+
 var ignoreIDs cli.StringSlice
 var ignoreIDsFlag = cli.StringSliceFlag{
 	Name:        "ignore-id",
 	Destination: &ignoreIDs,
-	Usage:       "ignore defects or vulnerabilities with any of the CVE ids",
+	Usage:       "ignore vulnerabilities with by CVE ids",
 	EnvVars:     []string{fmt.Sprintf("%s_IGNOREIDS", strings.ToUpper(metadata.Name))},
 	Category:    "Scanning",
 }
 
-var ignoreStates cli.StringSlice
-var ignoreStatesFlag = cli.StringSliceFlag{
-	Name:        "ignore-state",
-	Destination: &ignoreStates,
-	Usage:       "ignore defects or vulnerabilities with any of the specified CVE fix states",
-	EnvVars:     []string{fmt.Sprintf("%s_IGNORESTATES", strings.ToUpper(metadata.Name))},
+var ignoreFixStates cli.StringSlice
+var ignoreFixStatesFlag = cli.StringSliceFlag{
+	Name:        "ignore-fix-state",
+	Destination: &ignoreFixStates,
+	Usage:       "ignore vulnerabilities by fix states",
+	EnvVars:     []string{fmt.Sprintf("%s_IGNOREFIXSTATES", strings.ToUpper(metadata.Name))},
 	Category:    "Scanning",
 }
 
@@ -176,7 +185,7 @@ func New() *cli.App {
 					&settingsFileFlag,
 					&severityFlag,
 					&ignoreIDsFlag,
-					&ignoreStatesFlag,
+					&ignoreFixStatesFlag,
 				},
 				Action: func(c *cli.Context) error {
 					if c.NArg() > 0 {
@@ -186,7 +195,7 @@ func New() *cli.App {
 						return fmt.Errorf("settings file exists: %s", settingsFile)
 					}
 
-					settings := app.NewScansSettings(metadata.Version, severity, ignoreIDs.Value(), ignoreStates.Value())
+					settings := app.NewScansSettings(metadata.Version, severity, ignoreIDs.Value(), ignoreFixStates.Value())
 					if err := app.SaveSettings(settings, settingsFile); err != nil {
 						return err
 					}
@@ -214,8 +223,35 @@ func New() *cli.App {
 			{
 				Name:  "scanners",
 				Usage: "Shows scanner tools information",
+				Flags: []cli.Flag{
+					&settingsFileFlag,
+					&ignoreSettingsFlag,
+					&verboseFlag,
+					&severityFlag,
+					&ignoreIDsFlag,
+					&ignoreFixStatesFlag,
+				},
 				Action: func(c *cli.Context) error {
-					tbl := getScanToolsTable()
+					// Load the scan settings from the settings file as configured or
+					// create a new settings object as needed.
+					var err error
+					var settings *app.ScansSettings
+					if fileExists(settingsFile) && !ignoreSettings {
+						if verbose {
+							fmt.Printf("Loading settings from %s ...\n", settingsFile)
+						}
+						if settings, err = app.LoadSettings(settingsFile); err != nil {
+							return err
+						}
+					} else {
+						if verbose {
+							fmt.Println("Using default settings ...")
+						}
+						settings = app.NewScansSettings(metadata.Version, severity, ignoreIDs.Value(), ignoreFixStates.Value())
+					}
+
+					scanTools := settings.EnabledScanTools()
+					tbl := getScanToolsTable(scanTools)
 					tbl.Print()
 					return nil
 				},
@@ -276,7 +312,7 @@ output and summaries to bucket configured for use.`,
 					&verboseFlag,
 					&severityFlag,
 					&ignoreIDsFlag,
-					&ignoreStatesFlag,
+					&ignoreFixStatesFlag,
 					&pipelineFlag,
 					&gitRepoFlag,
 					&buildIdFlag,
@@ -285,50 +321,48 @@ output and summaries to bucket configured for use.`,
 					&s3KeyPrefixFlag,
 				},
 				Action: func(c *cli.Context) error {
-					var err error
+					// Ensure a single image argument is provided.
+					if c.NArg() == 0 {
+						return fmt.Errorf("missing image argument")
+					}
+					if c.NArg() > 1 {
+						return fmt.Errorf("too many image arguments")
+					}
+					image := c.Args().First()
 
-					// Load the scan settings from the settings file if it exists or
-					// create a new settings object.
+					// Load the scan settings from the settings file as configured or
+					// create a new settings object as needed.
+					var err error
 					var settings *app.ScansSettings
-					if fileExists(settingsFile) {
-						fmt.Printf("Loading settings from %s ...\n", settingsFile)
-						settings, err = app.LoadSettings(settingsFile)
-						if err != nil {
+					if fileExists(settingsFile) && !ignoreSettings {
+						if verbose || pipeline {
+							fmt.Printf("Loading settings from %s ...\n", settingsFile)
+						}
+						if settings, err = app.LoadSettings(settingsFile); err != nil {
 							return err
 						}
 					} else {
-						settings = app.NewScansSettings(metadata.Version, severity, ignoreIDs.Value(), ignoreStates.Value())
-					}
-
-					// Print the settings if we're running in pipeline mode.
-					if pipeline {
-						settingsText, err := settings.ToJSON()
-						if err != nil {
-							return err
+						if verbose || pipeline {
+							fmt.Println("Using default settings ...")
 						}
-						fmt.Println("SCAN SETTINGS")
-						fmt.Printf("%s\n\n", settingsText)
+						settings = app.NewScansSettings(metadata.Version, severity, ignoreIDs.Value(), ignoreFixStates.Value())
 					}
 
-					// Ensure application is not disabled in settings.
+					// Exit early if disabled in settings.
 					if settings.Disabled {
 						fmt.Println("exiting disabled application")
 						return nil
 					}
 
-					// Ensure a single argument is provided, at most, and set the image to that argument.
-					if c.NArg() > 1 {
-						return fmt.Errorf("too many image arguments")
-					}
-					var image string
-					if c.NArg() == 1 {
-						image = c.Args().First()
+					// Ensure the --severity option is valid.
+					if !isValidSeverity(severity) {
+						return fmt.Errorf("invalid severity: %s. Chose one of %s", severity, strings.Join(validSeverities, ", "))
 					}
 
-					// Ensure ignore states are valid.
-					for _, ignoreState := range ignoreStates.Value() {
-						if ignoreState != "" && !isValidIgnoreState(ignoreState) {
-							return fmt.Errorf("invalid ignore state: %s. Chose one of %s", ignoreState, strings.Join(validIgnoreStates, ", "))
+					// Ensure --ignore-fix-state options are valid.
+					for _, ignoreFixState := range ignoreFixStates.Value() {
+						if ignoreFixState != "" && !isValidIgnoreFixState(ignoreFixState) {
+							return fmt.Errorf("invalid ignore fix state: %s. Chose one of %s", ignoreFixState, strings.Join(validIgnoreFixStates, ", "))
 						}
 					}
 
@@ -342,26 +376,23 @@ output and summaries to bucket configured for use.`,
 						return fmt.Errorf("dirty git repository not allowed in pipeline mode")
 					}
 
-					// Normalize the --severity option value to lowercase and ensure it's valid.
-					severity = strings.ToLower(severity)
-					if !isValidSeverity(severity) {
-						return fmt.Errorf("invalid severity: %s. Chose one of %s", severity, strings.Join(validSeverities, ", "))
-					}
+					// Get enabled scan tools.
+					scanTools := settings.EnabledScanTools()
 
-					// Ensure required scan tools are available in PATH.
-					for name := range app.ScanTools {
-						if path, _ := exec.LookPath(name); path == "" {
-							return fmt.Errorf("missing scanner: %s", name)
+					// Inputs look good for processing, so let's continue on.
+					// First, print the settings if we're running in pipeline mode.
+					if pipeline {
+						settingsText, err := settings.ToJSON()
+						if err != nil {
+							return err
 						}
+						fmt.Println("SCAN SETTINGS")
+						fmt.Printf("%s\n\n", settingsText)
 					}
 
-					// Print application details if necessary.
+					// Next, print application details as configured.
 					if verbose || pipeline {
-						var pipelineMode string
-						if pipeline {
-							pipelineMode = "(pipeline mode)"
-						}
-						fmt.Printf("%s %s %s\n\n", metadata.Name, metadata.Version, pipelineMode)
+						fmt.Printf("%s %s\n\n", metadata.Name, metadata.Version)
 
 						fmt.Println("BUILD")
 						tbl := getBuildInfoTable()
@@ -374,7 +405,7 @@ output and summaries to bucket configured for use.`,
 						fmt.Println()
 
 						fmt.Println("SCAN TOOLS")
-						tbl = getScanToolsTable()
+						tbl = getScanToolsTable(scanTools)
 						tbl.Print()
 						fmt.Println()
 					}
@@ -385,7 +416,7 @@ output and summaries to bucket configured for use.`,
 					runner := app.NewScanRunner(app.ScanRunnerConfig{
 						Severity:     severity,
 						IgnoreCVEs:   ignoreIDs.Value(),
-						IgnoreStates: ignoreStates.Value(),
+						IgnoreStates: ignoreFixStates.Value(),
 						PipelineMode: pipeline,
 						Verbose:      verbose,
 						DryRun:       dryRun,
@@ -414,7 +445,7 @@ output and summaries to bucket configured for use.`,
 						S3Bucket:    s3Bucket,
 						S3KeyPrefix: s3KeyPrefix,
 					})
-					if err := reporter.Report(scans, beginTime); err != nil {
+					if err := reporter.Report(scanTools, scans, beginTime); err != nil {
 						return err
 					}
 
@@ -435,13 +466,14 @@ output and summaries to bucket configured for use.`,
 // Utility support
 // ----------------------------------------------------------------------------
 
-func checkFailed(scans []app.Scan) bool {
+func checkFailed(scans []*app.Scan) bool {
+	failed := false
 	for _, scan := range scans {
-		if scan.Ok {
-			return true
+		if !scan.Ok {
+			failed = true
 		}
 	}
-	return false
+	return failed
 }
 
 func fileExists(file string) bool {
@@ -455,8 +487,8 @@ func isValidSeverity(severity string) bool {
 	return slices.Contains(validSeverities, severity)
 }
 
-func isValidIgnoreState(ignoreState string) bool {
-	return slices.Contains(validIgnoreStates, ignoreState)
+func isValidIgnoreFixState(ignoreState string) bool {
+	return slices.Contains(validIgnoreFixStates, ignoreState)
 }
 
 // ----------------------------------------------------------------------------
@@ -481,7 +513,7 @@ func getConfigTable() table.Table {
 	tbl.AddRow("Dry Run", dryRun)
 	tbl.AddRow("Verbose", verbose)
 	tbl.AddRow("Severity", severity)
-	tbl.AddRow("IgnoreStates ", strings.Join(ignoreStates.Value(), ", "))
+	tbl.AddRow("IgnoreFixStates ", strings.Join(ignoreFixStates.Value(), ", "))
 	tbl.AddRow("Pipeline", pipeline)
 	tbl.AddRow("Git Repo", gitRepo)
 	tbl.AddRow("Build Id", buildId)
@@ -491,7 +523,7 @@ func getConfigTable() table.Table {
 	return tbl
 }
 
-func getScansTable(scans []app.Scan) table.Table {
+func getScansTable(scans []*app.Scan) table.Table {
 	tbl := table.New("Scan Tool", "Scan Type", "Scan Target",
 		"Total", "Critical", "High", "Medium", "Low", "Negligible", "Unknown", "Ignored",
 		"Exit", "Error")
@@ -504,16 +536,13 @@ func getScansTable(scans []app.Scan) table.Table {
 	return tbl
 }
 
-func getScanToolsTable() table.Table {
+func getScanToolsTable(scanners map[string]app.ScanTool) table.Table {
 	tbl := table.New("Name", "Version", "Path")
 	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
-	for name, scanner := range app.ScanTools {
-		version := scanner.Version()
-		if version == "" {
-			version = "not found"
-		}
-		path, _ := exec.LookPath(name)
-		if path == "" {
+	for name, scanTool := range scanners {
+		path, err := exec.LookPath(name)
+		version := scanTool.Version()
+		if err != nil {
 			path = "not found"
 		}
 		tbl.AddRow(name, version, path)

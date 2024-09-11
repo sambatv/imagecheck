@@ -119,7 +119,7 @@ command:
 alias imagecheck='docker run -it -v $(pwd):/app --rm ghcr.io/sambatv/imagecheck:latest'
 ```
 
-## Usage
+## Basic Usage
 
 For details on `imagecheck` usage, add the `-h` or `--help` option to any
 command:
@@ -143,7 +143,6 @@ is automatically detected by the `imagecheck scan` command when present.
 It contains:
 
 * the version of the `imagecheck` application used to generate the settings file
-* the timestamp of the settings file generation
 * the disabled status of all scanning
 * the scan settings for all scanners used by `imagecheck` in order of scanning
 
@@ -154,19 +153,22 @@ Multiple settings files can be created for different environments and branches,
 and can be selected for use with the `--settings`option.
 
 ```shell
-imagecheck init --settings .cache/imagecheck/prod.json
-imagecheck scan --settings .cache/imagecheck/prod.json $IMAGE
+imagecheck init --settings .imagecheck.my.settings.json
 ```
+
+Note that settings files can be ignored with the `--ignore-settings` option
+when running the `imagecheck scan` command.
 
 ### Scanning
 
-When run with no image argument, `imagecheck scan` performs:
+To run the scanners configured by a loaded settings file or its defaults, use
+the `imagecheck scan` command:
 
-* a `grype` scan of the repository filesystem
-* a `trivy` scan of the repository filesystem and config, including the Dockerfile
-* a `trufflehog` scan of the repository filesystem
+```shell
+imagecheck scan
+```
 
-If an image argument is provided, it additionally performs:
+With default settings, `imagecheck scan` performs:
 
 * a `grype` scan of the built image
 * a `trufflehog` scan of the built image
@@ -178,7 +180,7 @@ imagecheck scan $IMAGE
 This mode of operation is intended for local development and testing.
 Read further for details on how to use `imagecheck` in a CI/CD pipeline.
 
-### Reporting
+## Pipeline Usage
 
 In a CI/CD pipeline, the `imagecheck` command should be run with the
 following options, after an image has been built and before it is pushed to
@@ -196,8 +198,8 @@ imagecheck scan --pipeline \
 Where:
 
 * `S3_BUCKET` is the name of the S3 bucket to save scan results to
-* `S3_PREFIX` is the prefix of the S3 bucket key hierarchy to save scan results under, if any
-* `REPO_NAME` is the unique name of the git repository, e.g. `github.com/sambatv/imagecheck`
+* `S3_KEY_PREFIX` is the prefix of the S3 bucket key hierarchy to save scan results under, if any
+* `REPO_NAME` is the unique name of the git repository, e.g. `github.com/sambatv/imagecheck` 
 * `BUILD_ID` is the unique identifier of the build pipeline of the git repository
 * `IMAGE` is the name of the image to scan
 
@@ -205,8 +207,8 @@ If the `--s3-bucket` option is configured, scan results are saved to that S3
 bucket, under the `--s3-key-prefix` option.
 
 Before uploading scan results to S3, the scan results are locally cached in
-the configured `--cache-dir` directory. The schema for the cache directory is
-the following for the image built from this repository in its pipeline:
+the configured `--cache-dir` directory. The schema for the cache directory
+hierarchy is as follows:
 
 ```text
 CACHE_DIR/
@@ -214,44 +216,46 @@ CACHE_DIR/
     builds/
       BUILD_ID/
         imagecheck.summary.json
-        grype/
-          files/
-            scan.json
-          image/
-            ghcr.io/
-              sambatv/
-                imagecheck:TAG/
-                  scan.json
-        trivy/
-          config/
-             scan.json
-          files/
-             scan.json
-        trufflehog/
-          files/
-            scan.json
-          image/
-            ghcr.io/
-              sambatv/
-                imagecheck:TAG/
-                  scan.json
+        SCAN_TOOL/
+          SCAN_TYPE/
+            SCAN_TARGET/
+                scan.json
 ```
 
-Note that multiple images may be built from a single repository and its
-pipeline. All images should be scanned in the build pipeline with `imagecheck`
-before being pushed to their image registry repositories.
+Where:
 
-When uploading scan results to S3, the scan results are saved in the configured
---s3-bucket with the following keys schema, directly mapped from the cache
+* `CACHE_DIR` is the name of the S3 bucket to save scan results to
+* `REPO_NAME` is the unique name of the git repository, e.g. `github.com/sambatv/imagecheck`
+* `BUILD_ID` is the unique identifier of the build pipeline of the git repository
+* `SCAN_TOOL` is the name of the scanner tool used, e.g. `grype`, `trivy`, `trufflehog`
+* `SCAN_TYPE` is the type of scan performed, e.g. `files`, `image`
+* `SCAN_TARGET` is the target of the scan, e.g. `ghcr.io/sambatv/imagecheck:latest` image name or a file path
+
+Note that multiple images may be built from a single repository and its pipeline.
+All images should be scanned in the build pipeline with the `imagecheck scan`
+command before being pushed to their image registry repositories.
+
+When uploading scan results to S3, the scan results are uploaded to the configured
+`--s3-bucket` with the following keys schema, directly mapped from the cache
 directory schema:
 
 ```text
-S3_KEY_PREFIX/REPO_NAME/builds/BUILD_ID/imagecheck.summary.json
-S3_KEY_PREFIX/REPO_NAME/builds/BUILD_ID/grype/files/scan.json
-S3_KEY_PREFIX/REPO_NAME/builds/BUILD_ID/grype/image/ghcr.io/sambatv/imagecheck:TAG/scan.json
-S3_KEY_PREFIX/REPO_NAME/builds/BUILD_ID/trivy/config/scan.json
-S3_KEY_PREFIX/REPO_NAME/builds/BUILD_ID/trivy/files/scan.json
-S3_KEY_PREFIX/REPO_NAME/builds/BUILD_ID/trufflehog/files/scan.json
-S3_KEY_PREFIX/REPO_NAME/builds/BUILD_ID/trufflehog/image/ghcr.io/sambatv/imagecheck:TAG/scan.json
+S3_KEY_PREFIX/
+  REPO_NAME/
+    builds/
+      BUILD_ID/
+        imagecheck.summary.json
+        SCAN_TOOL/
+          SCAN_TYPE/
+            SCAN_TARGET/
+                scan.json
 ```
 
+Where:
+
+* `S3_KEY_PREFIX` is the prefix of the S3 bucket key hierarchy to save scan results under, if any
+* `REPO_NAME` is the unique name of the git repository, e.g. `github.com/sambatv/imagecheck`
+* `BUILD_ID` is the unique identifier of the build pipeline of the git repository
+* `SCAN_TOOL` is the name of the scanner tool used, e.g. `grype`, `trivy`, `trufflehog`
+* `SCAN_TYPE` is the type of scan performed, e.g. `files`, `image`
+* `SCAN_TARGET` is the target of the scan, e.g. `ghcr.io/sambatv/imagecheck:latest` image name or a file path

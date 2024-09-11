@@ -147,7 +147,7 @@ ifeq ($(RELEASE),)
 	@exit 1
 else ifneq ($(DIRTY),)
 	@echo
-	@echo 'git commit is dirty, skipping release'
+	@echo 'git repository state is dirty, skipping release'
 	@exit 1
 else
 	@echo

@@ -13,7 +13,7 @@ pushed to their upstream remote.
 
 ## Installation
 
-There are several ways to install the `imagecheck` application for use:
+There are several ways to install `imagecheck` for use:
 
 1. [`install.sh`](#installsh-script) script
 2. [`go install`](#go-install) command
@@ -22,19 +22,20 @@ There are several ways to install the `imagecheck` application for use:
 
 ### Scanner dependencies
 
-Scanners are required to be installed on the system. The scanners used by
-`imagecheck` are:
+Scanners are required to be installed on the system. Scanners used by
+`imagecheck` include:
 
 * [grype](https://github.com/anchore/grype)
 * [trivy](https://https://github.com/aquasecurity/trivy)
 * [trufflehog](https://github.com/trufflesecurity/trufflehog)
 
-Note that if using the `imagecheck` image, the scanners are already installed
-in that image and in its `$PATH`.
+Note that if using the `imagecheck` Docker image, the scanners are already
+installed in that image and in its `$PATH`.
 
 #### Install dependencies with brew
 
-On macOS and Linux, the scanners can be installed using [Homebrew](https://brew.sh):
+On macOS and Linux, the scanner binaries can be installed using
+[Homebrew](https://brew.sh):
 
 ```shell
 brew install anchore/grype/grype
@@ -64,14 +65,14 @@ curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scr
 
 ### install.sh script
 
-You can install the application from its GitHub releases using the `install.sh` script:
+You can install `imagecheck` from [GitHub releases](https://github.com/SambaTV/imagecheck/releases)
+using the `install.sh` script:
 
 ```shell
 curl -sSfL https://raw.githubusercontent.com/sambatv/imagecheck/main/install.sh | sh -s -- -b $HOME/bin
 ```
 
-After installation, the `imagecheck` binary will be available in your
-`$HOME/bin` directory.
+After installation, `imagecheck` will be available in your`$HOME/bin` directory.
 
 ### go install
 
@@ -82,8 +83,7 @@ if you have the required Go version 1.23 or higher installed:
 GOBIN=$HOME/bin go install github.com/sambatv/imagecheck@latest
 ```
 
-After installation, the `imagecheck` binary will be available in your
-`$HOME/bin` directory.
+After installation, `imagecheck` will be available in your `$HOME/bin` directory.
 
 ### go build
 
@@ -95,8 +95,7 @@ cd imagecheck
 make build
 ```
 
-After building, the `imagecheck` binary will be available in the repository
-root directory.
+After building, `imagecheck` will be available in the repository `bin/` directory.
 
 ### docker pull
 
@@ -106,8 +105,8 @@ The `imagecheck` docker image can be pulled from the `ghci.io` registry:
 docker pull ghcr.io/sambatv/imagecheck:latest
 ```
 
-After pulling, the `imagecheck` binary can be run from the docker image.
-The `imagecheck` binary is the entrypoint for the container image.
+After pulling, `imagecheck` can be run from the docker image. The `imagecheck`
+binary is the entrypoint for the container image.
 
 Note that the docker image contains the `imagecheck` binary and the binaries
 of all the scanners used by it.
@@ -142,7 +141,7 @@ is automatically detected by the `imagecheck scan` command when present.
 
 It contains:
 
-* the version of the `imagecheck` application used to generate the settings file
+* the version of `imagecheck` used to generate the settings file
 * the disabled status of all scanning
 * the scan settings for all scanners used by `imagecheck` in order of scanning
 
@@ -153,7 +152,7 @@ Multiple settings files can be created for different environments and branches,
 and can be selected for use with the `--settings`option.
 
 ```shell
-imagecheck init --settings .imagecheck.my.settings.json
+imagecheck init --settings imagecheck.my.settings.json
 ```
 
 Note that settings files can be ignored with the `--ignore-settings` option
@@ -182,12 +181,13 @@ Read further for details on how to use `imagecheck` in a CI/CD pipeline.
 
 ## Pipeline Usage
 
-In a CI/CD pipeline, the `imagecheck` command should be run with the
+In a CI/CD pipeline, the `imagecheck scan` command should be run with the
 following options, after an image has been built and before it is pushed to
 its image registry:
 
 ```shell
-imagecheck scan --pipeline \
+imagecheck scan \
+  --pipeline \                      # required, indicates the command is run in a CI/CD pipeline
   --s3-bucket $S3_BUCKET \          # required, S3 bucket to save scan results to
   --s3-key-prefix $S3_KEY_PREFIX \  # optional, defaults to 'imagecheck'
   --git-repo $REPO_NAME \           # optional, defaults to the git repository name parsed from the git remote URL
@@ -206,8 +206,8 @@ Where:
 If the `--s3-bucket` option is configured, scan results are saved to that S3
 bucket, under the `--s3-key-prefix` option.
 
-Before uploading scan results to S3, the scan results are locally cached in
-the configured `--cache-dir` directory. The schema for the cache directory
+Before uploading scan results to S3, scan results are locally cached in the
+configured `--cache-dir` directory. The schema for the cache directory
 hierarchy is as follows:
 
 ```text
@@ -235,7 +235,7 @@ Note that multiple images may be built from a single repository and its pipeline
 All images should be scanned in the build pipeline with the `imagecheck scan`
 command before being pushed to their image registry repositories.
 
-When uploading scan results to S3, the scan results are uploaded to the configured
+When uploading scan results to S3, scan results are uploaded to the configured
 `--s3-bucket` with the following keys schema, directly mapped from the cache
 directory schema:
 

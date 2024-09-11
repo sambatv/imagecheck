@@ -187,20 +187,20 @@ its image registry:
 
 ```shell
 imagecheck scan \
-  --pipeline \                      # required, indicates the command is run in a CI/CD pipeline
-  --s3-bucket $S3_BUCKET \          # required, S3 bucket to save scan results to
-  --s3-key-prefix $S3_KEY_PREFIX \  # optional, defaults to 'imagecheck'
-  --git-repo $REPO_NAME \           # optional, defaults to the git repository name parsed from the git remote URL
-  --build-id $BUILD_ID \            # required, unique identifier of the build pipeline
-  $IMAGE 
+  --pipeline \
+  --s3-bucket S3_BUCKET \
+  --s3-key-prefix S3_KEY_PREFIX \
+  --git-repo REPO_NAME
+  --build-id BUILD_ID
+  IMAGE 
 ```
 
 Where:
 
-* `S3_BUCKET` is the name of the S3 bucket to save scan results to
-* `S3_KEY_PREFIX` is the prefix of the S3 bucket key hierarchy to save scan results under, if any
-* `REPO_NAME` is the unique name of the git repository, e.g. `github.com/sambatv/imagecheck` 
-* `BUILD_ID` is the unique identifier of the build pipeline of the git repository
+* `S3_BUCKET` is the name of the S3 bucket to save scan results to (required)
+* `S3_KEY_PREFIX` is the prefix of the S3 bucket key hierarchy to save scan results under, if any (optional, defaults to 'imagecheck')
+* `REPO_NAME` is the unique name of the git repository, e.g. `github.com/sambatv/imagecheck` (optional, defaults to the git repository name parsed from the git remote URL)
+* `BUILD_ID` is the unique identifier of the build pipeline of the git repository (required)
 * `IMAGE` is the name of the image to scan
 
 If the `--s3-bucket` option is configured, scan results are saved to that S3

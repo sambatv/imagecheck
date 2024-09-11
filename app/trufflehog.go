@@ -78,6 +78,7 @@ func (s TrufflehogScanner) run(cmdline, target string, settings *ScanSettings) *
 	// vulnerability, which we will score as a critical vulnerability.
 	scan.NumCritical = len(data)
 	scan.Ok = scan.NumCritical == 0
+	fmt.Printf("vulnerabilities: %d found\n", scan.NumCritical)
 	return scan
 }
 

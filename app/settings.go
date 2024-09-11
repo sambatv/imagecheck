@@ -7,16 +7,16 @@ import (
 	"slices"
 )
 
-// ScansSettings represents the configuration settings for the application,
-// some of which are not persisted to disk in JSON format, but are set at
-// runtime from the command line options.
+// ScansSettings represents the initial version of application scan settings.
+// Some fields are not persisted to disk in JSON format, but are set at runtime
+// from the command line options or their corresponding environment variables.
 type ScansSettings struct {
-	AppVersion      string          `json:"appVersion"`
+	AppVersion      string          `json:"app_version"`
 	Disabled        bool            `json:"disabled"`
 	Severity        string          `json:"severity"`
-	IgnoreIDs       []string        `json:"ignoreIds"`
-	IgnoreFixStates []string        `json:"ignoreFixStates"`
-	ScanSettings    []*ScanSettings `json:"scanSettings"`
+	IgnoreIDs       []string        `json:"ignore_ids"`
+	IgnoreFixStates []string        `json:"ignore_fix_states"`
+	ScanSettings    []*ScanSettings `json:"scan_settings"`
 	dryRun          bool
 	verbose         bool
 	pipelineMode    bool
@@ -64,23 +64,23 @@ func (s ScansSettings) EnabledScanTools() map[string]ScanTool {
 // not persisted to disk in JSON format, but are set at runtime from the command
 // line options.
 type ScanSettings struct {
-	ScanTool        string `json:"scanTool"`
-	ScanType        string `json:"scanType"`
+	ScanTool        string `json:"scan_tool"`
+	ScanType        string `json:"scan_type"`
 	Disabled        bool   `json:"disabled"`
-	severity        string
-	ignoreIDs       []string
-	ignoreFixStates []string
 	dryRun          bool
 	verbose         bool
 	pipelineMode    bool
+	severity        string
+	ignoreIDs       []string
+	ignoreFixStates []string
 }
 
-// IsIgnoredID returns true if the CVE ID is ignored in settings.
+// IsIgnoredID tests if the CVE ID is ignored in settings.
 func (s ScanSettings) IsIgnoredID(id string) bool {
 	return slices.Contains(s.ignoreIDs, id)
 }
 
-// IsIgnoredFixState returns true if the fix state is ignored in settings.
+// IsIgnoredFixState tests if the fix state is ignored in settings.
 func (s ScanSettings) IsIgnoredFixState(state string) bool {
 	return slices.Contains(s.ignoreFixStates, state)
 }

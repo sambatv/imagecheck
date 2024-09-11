@@ -4,21 +4,21 @@ import "strings"
 
 // Scan represents the results of a scan.
 type Scan struct {
-	Settings      *ScanSettings `json:"scanSettings"`
-	ScanTarget    string        `json:"scanTarget"`
-	CommandLine   string        `json:"commandLine"`
-	DurationSecs  float64       `json:"durationSecs"`
+	Settings      *ScanSettings `json:"settings"`
+	Target        string        `json:"target"`
+	Cmdline       string        `json:"cmdline"`
+	DurationSecs  float64       `json:"duration_secs"`
 	Error         string        `json:"error"`
-	ExitCode      int           `json:"exitCode"`
+	ExitCode      int           `json:"exit_code"`
 	Ok            bool          `json:"ok"`
-	NumCritical   int           `json:"numCritical"`
-	NumHigh       int           `json:"numHigh"`
-	NumMedium     int           `json:"numMedium"`
-	NumLow        int           `json:"numLow"`
-	NumNegligible int           `json:"numNegligible"`
-	NumUnknown    int           `json:"numUnknown"`
-	NumIgnored    int           `json:"numIgnored"`
-	S3URL         string        `json:"s3URL"`
+	NumCritical   int           `json:"num_critical"`
+	NumHigh       int           `json:"num_high"`
+	NumMedium     int           `json:"num_medium"`
+	NumLow        int           `json:"num_low"`
+	NumNegligible int           `json:"num_negligible"`
+	NumUnknown    int           `json:"num_known"`
+	NumIgnored    int           `json:"num_ignored"`
+	S3URL         string        `json:"s3_url"`
 	stdout        []byte
 }
 
@@ -26,8 +26,8 @@ type Scan struct {
 func NewScan(settings *ScanSettings, target, cmdline string, durationSecs float64, exitCode int, stdout []byte) *Scan {
 	return &Scan{
 		Settings:     settings,
-		ScanTarget:   target,
-		CommandLine:  cmdline,
+		Target:       target,
+		Cmdline:      cmdline,
 		DurationSecs: durationSecs,
 		ExitCode:     exitCode,
 		stdout:       stdout,

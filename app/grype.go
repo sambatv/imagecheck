@@ -78,7 +78,7 @@ func (s GrypeScanner) run(cmdline, target string, settings *ScanSettings) *Scan 
 	numFailures := 0
 	matches := data["matches"].([]interface{})
 	if settings.pipelineMode || settings.verbose {
-		fmt.Printf("num vulnerabilities: %d\n", len(matches))
+		fmt.Printf("vulnerabilities: %d found\n", len(matches))
 	}
 	for i, match := range matches {
 		i += 1

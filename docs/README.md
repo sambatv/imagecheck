@@ -186,76 +186,71 @@ following options, after an image has been built and before it is pushed to
 its image registry:
 
 ```shell
-imagecheck scan \
-  --pipeline \
-  --s3-bucket S3_BUCKET \
-  --s3-key-prefix S3_KEY_PREFIX \
-  --git-repo REPO_NAME
-  --build-id BUILD_ID
-  IMAGE 
+imagecheck scan --pipeline --build-id BUILD_ID --s3-bucket S3_BUCKET IMAGE 
 ```
 
 Where:
 
-* `S3_BUCKET` is the name of the S3 bucket to save scan results to (required)
-* `S3_KEY_PREFIX` is the prefix of the S3 bucket key hierarchy to save scan results under, if any (optional, defaults to 'imagecheck')
-* `REPO_NAME` is the unique name of the git repository, e.g. `github.com/sambatv/imagecheck` (optional, defaults to the git repository name parsed from the git remote URL)
-* `BUILD_ID` is the unique identifier of the build pipeline of the git repository (required)
+* `BUILD_ID` is the unique identifier of the build pipeline of the git repository
+* `S3_BUCKET` is the name of the S3 bucket to save scan results
 * `IMAGE` is the name of the image to scan
 
 If the `--s3-bucket` option is configured, scan results are saved to that S3
-bucket, under the `--s3-key-prefix` option.
+bucket, under the `--s3-key-prefix` option, defaulting to `imagecheck`.
 
 Before uploading scan results to S3, scan results are locally cached in the
-configured `--cache-dir` directory. The schema for the cache directory
-hierarchy is as follows:
+configured `--cache-dir` directory, defaulting to a `cache` subdirectory in the
+current working directory.
+
+The schema for the cache directory hierarchy is as follows:
 
 ```text
 CACHE_DIR/
-  REPO_NAME/
+  REPO_ID/
     builds/
       BUILD_ID/
-        imagecheck.summary.json
+        summary.json
         SCAN_TOOL/
           SCAN_TYPE/
             SCAN_TARGET/
-                scan.json
+                output.json
 ```
 
 Where:
 
 * `CACHE_DIR` is the name of the S3 bucket to save scan results to
-* `REPO_NAME` is the unique name of the git repository, e.g. `github.com/sambatv/imagecheck`
+* `REPO_ID` is the unique name of the git repository, e.g. `github.com/sambatv/imagecheck`
 * `BUILD_ID` is the unique identifier of the build pipeline of the git repository
 * `SCAN_TOOL` is the name of the scanner tool used, e.g. `grype`, `trivy`, `trufflehog`
 * `SCAN_TYPE` is the type of scan performed, e.g. `files`, `image`
-* `SCAN_TARGET` is the target of the scan, e.g. `ghcr.io/sambatv/imagecheck:latest` image name or a file path
+* `SCAN_TARGET` is the target of the scan, e.g. `ghcr.io/sambatv/imagecheck:latest` image name or some file path
 
-Note that multiple images may be built from a single repository and its pipeline.
-All images should be scanned in the build pipeline with the `imagecheck scan`
+Note that multiple images may be built from a single git repository and its
+pipeline. All images should be scanned in build pipelines with the `imagecheck scan`
 command before being pushed to their image registry repositories.
 
 When uploading scan results to S3, scan results are uploaded to the configured
-`--s3-bucket` with the following keys schema, directly mapped from the cache
-directory schema:
+`--s3-bucket` directly mapped from the cache directory schema:
 
 ```text
-S3_KEY_PREFIX/
-  REPO_NAME/
-    builds/
-      BUILD_ID/
-        imagecheck.summary.json
-        SCAN_TOOL/
-          SCAN_TYPE/
-            SCAN_TARGET/
-                scan.json
+S3_BUCKET/
+  S3_KEY_PREFIX/
+    REPO_ID/
+      builds/
+        BUILD_ID/
+          summary.json
+          SCAN_TOOL/
+            SCAN_TYPE/
+              SCAN_TARGET/
+                  output.json
 ```
 
 Where:
 
+* `S3_BUCKET` is the name of the S3 bucket to save scan results to
 * `S3_KEY_PREFIX` is the prefix of the S3 bucket key hierarchy to save scan results under, if any
-* `REPO_NAME` is the unique name of the git repository, e.g. `github.com/sambatv/imagecheck`
+* `REPO_ID` is the unique name of the git repository, e.g. `github.com/sambatv/imagecheck`
 * `BUILD_ID` is the unique identifier of the build pipeline of the git repository
 * `SCAN_TOOL` is the name of the scanner tool used, e.g. `grype`, `trivy`, `trufflehog`
 * `SCAN_TYPE` is the type of scan performed, e.g. `files`, `image`
-* `SCAN_TARGET` is the target of the scan, e.g. `ghcr.io/sambatv/imagecheck:latest` image name or a file path
+* `SCAN_TARGET` is the target of the scan, e.g. `ghcr.io/sambatv/imagecheck:latest` image name or some file path

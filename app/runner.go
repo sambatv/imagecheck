@@ -97,7 +97,7 @@ func execScanner(cmdline string, settings *ScanSettings) (int, []byte, error) {
 		err      error
 	)
 	if settings.pipelineMode || settings.verbose {
-		fmt.Printf("running: %s\n", cmdline)
+		fmt.Printf("exec: %s\n", cmdline)
 	}
 
 	// Build command.

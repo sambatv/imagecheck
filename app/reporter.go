@@ -20,11 +20,11 @@ import (
 // ScanReporterConfig represents the configuration for a ScanReporter.
 type ScanReporterConfig struct {
 	Verbose     bool   `json:"verbose"`
-	GitRepo     string `json:"gitRepo"`
-	CacheDir    string `json:"cacheDir"`
-	BuildId     string `json:"buildId"`
-	S3Bucket    string `json:"s3Bucket"`
-	S3KeyPrefix string `json:"s3KeyPrefix"`
+	RepoID      string `json:"repo_id"`
+	BuildID     string `json:"build_id"`
+	CacheDir    string `json:"cache_dir"`
+	S3Bucket    string `json:"s3_bucket"`
+	S3KeyPrefix string `json:"s3_key_prefix"`
 }
 
 // ScanReporter reports the results of scans.
@@ -54,7 +54,7 @@ func (r ScanReporter) Report(scanTools map[string]ScanTool, scans []*Scan, times
 
 	// Enrich all scans with the S3 URL of their scan output.
 	for i := range scans {
-		sPath := scanPath(scans[i])
+		sPath := outputPath(scans[i])
 		s3Key := r.S3Key(sPath)
 		scans[i].S3URL = fmt.Sprintf("s3://%s/%s", r.cfg.S3Bucket, s3Key)
 	}
@@ -89,14 +89,14 @@ func (r ScanReporter) Report(scanTools map[string]ScanTool, scans []*Scan, times
 }
 
 func (r ScanReporter) CachePath(filename string) string {
-	return path.Join(r.cfg.CacheDir, r.cfg.GitRepo, "builds", r.cfg.BuildId, filename)
+	return path.Join(r.cfg.CacheDir, r.cfg.RepoID, "builds", r.cfg.BuildID, filename)
 }
 
 // CacheScan caches the scan output to a local file.
 func (r ScanReporter) CacheScan(scan *Scan) error {
 	// Add the S3 URL to the scan for output in report.
-	cachePath := r.CachePath(scanPath(scan))
-	fmt.Printf("caching scan: %s\n", cachePath)
+	cachePath := r.CachePath(outputPath(scan))
+	fmt.Printf("caching: %s\n", cachePath)
 	if err := ensureDir(path.Dir(cachePath)); err != nil {
 		return err
 	}
@@ -116,14 +116,14 @@ func (r ScanReporter) CacheSummary(summary Summary) error {
 // S3Key returns the S3 key for the scan cache file.
 func (r ScanReporter) S3Key(filename string) string {
 	if r.cfg.S3KeyPrefix != "" {
-		return path.Join(r.cfg.S3KeyPrefix, r.cfg.GitRepo, "builds", r.cfg.BuildId, filename)
+		return path.Join(r.cfg.S3KeyPrefix, r.cfg.RepoID, "builds", r.cfg.BuildID, filename)
 	}
-	return path.Join(r.cfg.GitRepo, "builds", r.cfg.BuildId, filename)
+	return path.Join(r.cfg.RepoID, "builds", r.cfg.BuildID, filename)
 }
 
 // UploadScan uploads the scan cache file to S3.
 func (r ScanReporter) UploadScan(scan *Scan) error {
-	filePath := scanPath(scan)
+	filePath := outputPath(scan)
 	srcPath := r.CachePath(filePath)
 	dstKey := r.S3Key(filePath)
 	return uploadS3Object(r.cfg.S3Bucket, dstKey, srcPath)
@@ -178,8 +178,8 @@ type Summary struct {
 	Hostname     string            `json:"hostname"`
 	Username     string            `json:"username"`
 	Timestamp    string            `json:"timestamp"`
-	DurationSecs float64           `json:"durationSecs"`
-	ToolVersions map[string]string `json:"toolVersions"`
+	DurationSecs float64           `json:"duration_secs"`
+	ToolVersions map[string]string `json:"tool_versions"`
 	Scans        []*Scan           `json:"scans"`
 }
 
@@ -200,16 +200,19 @@ func NewSummary(scanTools map[string]ScanTool, scans []*Scan, timestamp time.Tim
 	}
 }
 
-// scanPath returns the path of the scan output file.
-func scanPath(s *Scan) string {
-	const fileName = "scan.json"
-	if s.Settings.ScanType == "image" {
-		return filepath.Join(s.Settings.ScanTool, s.Settings.ScanType, s.ScanTarget, fileName)
+// outputPath returns the path of the scan output file.
+func outputPath(s *Scan) string {
+	var target string
+	switch s.Settings.ScanType {
+	case "image":
+		target = s.Target
+	default:
+		target = "cwd"
 	}
-	return filepath.Join(s.Settings.ScanTool, s.Settings.ScanType, fileName)
+	return filepath.Join(s.Settings.ScanTool, s.Settings.ScanType, target, "output.json")
 }
 
 // summaryPath returns the path of the summary output file.
 func summaryPath() string {
-	return fmt.Sprintf("%s.summary.json", metadata.Name)
+	return "summary.json"
 }

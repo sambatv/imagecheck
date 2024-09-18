@@ -82,7 +82,7 @@ func (s *Scan) Score() {
 		// Increment total defects ignored counter if ignored and continue on to next scan.
 		if s.Settings.IsIgnoredID(defect.ID) || s.Settings.IsIgnoredFixState(defect.FixState) {
 			s.NumIgnored++
-			if s.Settings.verbose {
+			if s.Settings.verbose || s.Settings.pipelineMode {
 				fmt.Printf("ignored %s check: defect %v\n", s.Settings.severity, defect)
 			}
 			continue
@@ -92,34 +92,34 @@ func (s *Scan) Score() {
 		switch s.Settings.severity {
 		case "critical":
 			if defect.Severity == "critical" {
-				if s.Settings.verbose {
+				if s.Settings.verbose || s.Settings.pipelineMode {
 					fmt.Printf("failed %s check: defect %v\n", s.Settings.severity, defect)
 				}
 				s.Failed = true
 			}
 		case "high":
 			if defect.Severity == "critical" || defect.Severity == "high" {
-				if s.Settings.verbose {
+				if s.Settings.verbose || s.Settings.pipelineMode {
 					fmt.Printf("failed %s check: defect %v\n", s.Settings.severity, defect)
 				}
 				s.Failed = true
 			}
 		case "medium":
 			if defect.Severity == "critical" || defect.Severity == "high" || defect.Severity == "medium" {
-				if s.Settings.verbose {
+				if s.Settings.verbose || s.Settings.pipelineMode {
 					fmt.Printf("failed %s check: defect %v\n", s.Settings.severity, defect)
 				}
 				s.Failed = true
 			}
 		case "low":
 			if defect.Severity == "critical" || defect.Severity == "high" || defect.Severity == "medium" || defect.Severity == "low" {
-				if s.Settings.verbose {
+				if s.Settings.verbose || s.Settings.pipelineMode {
 					fmt.Printf("failed %s check: defect %v\n", s.Settings.severity, defect)
 				}
 				s.Failed = true
 			}
 		default:
-			if s.Settings.verbose {
+			if s.Settings.verbose || s.Settings.pipelineMode {
 				fmt.Printf("skipped %s check: defect %v\n", s.Settings.severity, defect)
 			}
 		}

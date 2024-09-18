@@ -11,6 +11,11 @@ type Defect struct {
 	FixState string `json:"fix_state"`
 }
 
+// String returns a string representation of a Defect.
+func (d Defect) String() string {
+	return fmt.Sprintf("%s %s %s", d.ID, d.Severity, d.FixState)
+}
+
 // Scan represents the results of a scan.
 type Scan struct {
 	Settings      *ScanSettings `json:"settings"`
@@ -55,7 +60,7 @@ func (s *Scan) Score() {
 	for i, defect := range s.defects {
 		// Print the defect if in verbose or pipeline mode.
 		if s.Settings.verbose || s.Settings.pipelineMode {
-			fmt.Printf("defect %d: %s %s %s\n", i, defect.ID, defect.Severity, defect.FixState)
+			fmt.Printf("defect %d: %v\n", i, defect)
 		}
 
 		// Increment appropriate counters by severity.
@@ -77,6 +82,9 @@ func (s *Scan) Score() {
 		// Increment total defects ignored counter if ignored and continue on to next scan.
 		if s.Settings.IsIgnoredID(defect.ID) || s.Settings.IsIgnoredFixState(defect.FixState) {
 			s.NumIgnored++
+			if s.Settings.verbose {
+				fmt.Printf("ignored %s check: defect %v\n", s.Settings.severity, defect)
+			}
 			continue
 		}
 
@@ -85,34 +93,34 @@ func (s *Scan) Score() {
 		case "critical":
 			if defect.Severity == "critical" {
 				if s.Settings.verbose {
-					fmt.Printf("failed %s check: %s %s %s\n", s.Settings.severity, defect.ID, defect.Severity, defect.FixState)
+					fmt.Printf("failed %s check: defect %v\n", s.Settings.severity, defect)
 				}
 				s.Failed = true
 			}
 		case "high":
 			if defect.Severity == "critical" || defect.Severity == "high" {
 				if s.Settings.verbose {
-					fmt.Printf("failed %s check: %s %s %s\n", s.Settings.severity, defect.ID, defect.Severity, defect.FixState)
+					fmt.Printf("failed %s check: defect %v\n", s.Settings.severity, defect)
 				}
 				s.Failed = true
 			}
 		case "medium":
 			if defect.Severity == "critical" || defect.Severity == "high" || defect.Severity == "medium" {
 				if s.Settings.verbose {
-					fmt.Printf("failed %s check: %s %s %s\n", s.Settings.severity, defect.ID, defect.Severity, defect.FixState)
+					fmt.Printf("failed %s check: defect %v\n", s.Settings.severity, defect)
 				}
 				s.Failed = true
 			}
 		case "low":
 			if defect.Severity == "critical" || defect.Severity == "high" || defect.Severity == "medium" || defect.Severity == "low" {
 				if s.Settings.verbose {
-					fmt.Printf("failed %s check: %s %s %s\n", s.Settings.severity, defect.ID, defect.Severity, defect.FixState)
+					fmt.Printf("failed %s check: defect %v\n", s.Settings.severity, defect)
 				}
 				s.Failed = true
 			}
 		default:
 			if s.Settings.verbose {
-				fmt.Printf("skipped %s check: %s %s %s\n", s.Settings.severity, defect.ID, defect.Severity, defect.FixState)
+				fmt.Printf("skipped %s check: defect %v\n", s.Settings.severity, defect)
 			}
 		}
 	}

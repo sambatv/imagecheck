@@ -4,9 +4,6 @@ bin/
 # local imagecheck scans
 cache/
 
-# imagecheck scan settings files
-*imagecheck*.settings.json
-
 # direnv files
 .envrc
 

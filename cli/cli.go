@@ -531,13 +531,12 @@ output and summaries to the S3 bucket and key prefix configured for use.`,
 // ----------------------------------------------------------------------------
 
 func checkFailed(scans []*app.Scan) bool {
-	failed := false
 	for _, scan := range scans {
-		if !scan.Ok {
-			failed = true
+		if scan.Failed {
+			return true
 		}
 	}
-	return failed
+	return false
 }
 
 func fileExists(file string) bool {
@@ -595,7 +594,7 @@ func getScansTable(scans []*app.Scan) table.Table {
 	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
 	for _, scan := range scans {
 		tbl.AddRow(scan.Settings.ScanTool, scan.Settings.ScanType, scan.Target,
-			scan.NumTotal(), scan.NumCritical, scan.NumHigh, scan.NumMedium, scan.NumLow, scan.NumNegligible, scan.NumUnknown, scan.NumIgnored,
+			scan.NumTotal, scan.NumCritical, scan.NumHigh, scan.NumMedium, scan.NumLow, scan.NumNegligible, scan.NumUnknown, scan.NumIgnored,
 			scan.ExitCode, scan.Error)
 	}
 	return tbl

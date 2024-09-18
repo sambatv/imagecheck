@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"strings"
 	"time"
 )
 
@@ -76,7 +77,7 @@ func (s TrivyScanner) run(cmdline, target string, settings *ScanSettings) *Scan 
 		return scan
 	}
 
-	// Otherwise, parse the JSON output to get the number of vulnerabilities.
+	// Otherwise, parse the JSON output to get the number of defects.
 	var data map[string]any
 	if err := json.Unmarshal(stdout, &data); err != nil {
 		scan.Error = err.Error()
@@ -87,35 +88,41 @@ func (s TrivyScanner) run(cmdline, target string, settings *ScanSettings) *Scan 
 	case "config":
 		results := data["Results"].([]any)
 		for _, result := range results {
-			misconfigurations, ok := result.(map[string]any)["Misconfigurations"].([]any)
-			if !ok {
-				// No misconfigurations found. Yay!
-				continue
-			}
+			misconfigurations := result.(map[string]any)["Misconfigurations"].([]any)
 			if settings.pipelineMode || settings.verbose {
 				fmt.Printf("misconfigurations: %d found\n", len(misconfigurations))
 			}
 			for _, misconfiguration := range misconfigurations {
 				severity := misconfiguration.(map[string]any)["Severity"].(string)
-				scan.Score(severity)
+				severity = strings.ToLower(severity)
 			}
 		}
 	case "files":
 		results := data["Results"].([]any)
 		for _, result := range results {
-			vulnerabilities, ok := result.(map[string]any)["Vulnerabilities"].([]any)
-			if !ok {
-				// No vulnerabilities found. Yay!
-				continue
-			}
+			vulnerabilities := result.(map[string]any)["Vulnerabilities"].([]any)
 			if settings.pipelineMode || settings.verbose {
-				fmt.Printf("vulnerabilities: %d found\n", len(vulnerabilities))
+				fmt.Printf("defects: %d found\n", len(vulnerabilities))
 			}
 			for _, vulnerability := range vulnerabilities {
 				severity := vulnerability.(map[string]any)["Severity"].(string)
-				scan.Score(severity)
+				severity = strings.ToLower(severity)
+
+				id := vulnerability.(map[string]any)["VulnerabilityID"].(string)
+
+				fixState := vulnerability.(map[string]any)["FixedVersion"].(string)
+				if fixState == "" {
+					fixState = "unfixed"
+				}
+
+				scan.defects = append(scan.defects, Defect{
+					ID:       id,
+					Severity: severity,
+					FixState: fixState,
+				})
 			}
 		}
 	}
+	scan.Score()
 	return scan
 }

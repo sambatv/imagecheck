@@ -67,60 +67,36 @@ func (s GrypeScanner) run(cmdline, target string, settings *ScanSettings) *Scan 
 		return scan
 	}
 
-	// Otherwise, parse the JSON output to get the number of vulnerabilities.
+	// Otherwise, parse the JSON output to get the number of defects.
 	var data map[string]any
 	if err := json.Unmarshal(stdout, &data); err != nil {
 		scan.Error = err.Error()
 		return scan
 	}
 
-	// Count the number of vulnerabilities by severity.
-	numFailures := 0
+	// Add defects to the scan.
 	matches := data["matches"].([]interface{})
 	if settings.pipelineMode || settings.verbose {
-		fmt.Printf("vulnerabilities: %d found\n", len(matches))
+		fmt.Printf("defects: %d found\n", len(matches))
 	}
-	for i, match := range matches {
-		i += 1
+	for _, match := range matches {
 		vulnerability := match.(map[string]any)["vulnerability"].(map[string]any)
 
-		// Score the vulnerability based on its severity.
 		severity := vulnerability["severity"].(string)
 		severity = strings.ToLower(severity)
-		scan.Score(severity)
 
-		// Test if vulnerability id is ignored.
 		id := vulnerability["id"].(string)
-		if settings.verbose || settings.pipelineMode {
-			fmt.Printf("vulnerability %d: id=%s, severity=%s\n", i, id, severity)
-		}
-		if settings.IsIgnoredID(id) {
-			scan.NumIgnored++
-			if settings.verbose || settings.pipelineMode {
-				fmt.Printf("vulnerability %d: ignoring id %s\n", i, id)
-			}
-			scan.Ok = true // ignored id does not fail the scan
-			continue
-		}
 
-		// Test if vulnerability fix state is ignored.
 		fix := vulnerability["fix"].(map[string]any)
 		fixState := fix["state"].(string)
 		fixState = strings.ToLower(fixState)
-		if settings.IsIgnoredFixState(fixState) {
-			scan.NumIgnored++
-			if settings.verbose || settings.pipelineMode {
-				fmt.Printf("vulnerability %d: ignoring fix state %s\n", i, fixState)
-			}
-			scan.Ok = true // ignored fix state does not fail the scan
-			continue
-		}
 
-		// If not ignored, the scan is ok if the severity is below the failure threshold.
-		if scan.Failed() {
-			numFailures++
-		}
+		scan.defects = append(scan.defects, Defect{
+			ID:       id,
+			Severity: severity,
+			FixState: fixState,
+		})
 	}
-	scan.Ok = numFailures == 0
+	scan.Score()
 	return scan
 }

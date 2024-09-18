@@ -66,7 +66,7 @@ func (s TrufflehogScanner) run(cmdline, target string, settings *ScanSettings) *
 		return scan
 	}
 
-	// Otherwise, parse the JSON output to get the number of vulnerabilities.
+	// Otherwise, parse the JSON output to get the number of defects.
 	scan.stdout = wrapJSONArray(scan.stdout)
 	var data []any
 	if err := json.Unmarshal(scan.stdout, &data); err != nil {
@@ -77,8 +77,8 @@ func (s TrufflehogScanner) run(cmdline, target string, settings *ScanSettings) *
 	// Count the number of objects in output. With trufflehog, every object is a
 	// vulnerability, which we will score as a critical vulnerability.
 	scan.NumCritical = len(data)
-	scan.Ok = scan.NumCritical == 0
-	fmt.Printf("vulnerabilities: %d found\n", scan.NumCritical)
+	scan.Failed = scan.NumCritical > 0
+	fmt.Printf("defects: %d found\n", scan.NumCritical)
 	return scan
 }
 

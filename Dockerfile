@@ -13,6 +13,8 @@ FROM debian:bookworm-slim
 RUN apt update && apt upgrade -y
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
 COPY --from=builder /app/bin/imagecheck /usr/local/bin/
+RUN useradd -u 1001 -ms /bin/bash app
+USER app
+WORKDIR /home/app
 USER 1001:1001
-WORKDIR /app
 ENTRYPOINT ["/usr/local/bin/imagecheck"]

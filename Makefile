@@ -94,7 +94,7 @@ deps: ## Install all scanner dependency binaries
 build: ## Build the application binary
 	@echo
 	@echo 'building $(APP_NAME) ...'
-	go build $(GO_LDFLAGS) -o ./bin/$(APP_NAME) .
+	CGO_ENABLED=0 go build $(GO_LDFLAGS) -tags netgo -o ./bin/$(APP_NAME) .
 
 .PHONY: lint
 lint: ## Lint the application

@@ -298,8 +298,15 @@ func New() *cli.App {
 						settings = app.NewScansSettings(metadata.Version, severity, ignoreIDs, ignoreFixStates)
 					}
 
-					scanTools := settings.EnabledScanTools()
-					tbl := getScanToolsTable(scanTools)
+					// Create scan runner.
+					runner := app.NewScanRunner(app.ScanRunnerConfig{
+						Severity:     severity,
+						IgnoreCVEs:   ignoreIDs,
+						IgnoreStates: ignoreFixStates,
+						Verbose:      verbose,
+						Settings:     *settings,
+					})
+					tbl := getScanToolsTable(runner.Tools())
 					tbl.Print()
 					return nil
 				},
@@ -440,8 +447,16 @@ output and summaries to the S3 bucket and key prefix configured for use.`,
 						return fmt.Errorf("dirty git repository not allowed in pipeline mode")
 					}
 
-					// Get enabled scan tools.
-					scanTools := settings.EnabledScanTools()
+					// Create scan runner.
+					runner := app.NewScanRunner(app.ScanRunnerConfig{
+						Severity:     severity,
+						IgnoreCVEs:   ignoreIDs,
+						IgnoreStates: ignoreFixStates,
+						PipelineMode: pipeline,
+						Verbose:      verbose,
+						DryRun:       dryRun,
+						Settings:     *settings,
+					})
 
 					// Inputs look good for processing, so let's continue on.
 					// First, print the settings if we're running in pipeline mode.
@@ -469,7 +484,7 @@ output and summaries to the S3 bucket and key prefix configured for use.`,
 						fmt.Println()
 
 						fmt.Println("SCAN TOOLS")
-						tbl = getScanToolsTable(scanTools)
+						tbl = getScanToolsTable(runner.Tools())
 						tbl.Print()
 						fmt.Println()
 					}
@@ -477,15 +492,6 @@ output and summaries to the S3 bucket and key prefix configured for use.`,
 					if verbose || pipeline {
 						fmt.Println("Running scans ...")
 					}
-					runner := app.NewScanRunner(app.ScanRunnerConfig{
-						Severity:     severity,
-						IgnoreCVEs:   ignoreIDs,
-						IgnoreStates: ignoreFixStates,
-						PipelineMode: pipeline,
-						Verbose:      verbose,
-						DryRun:       dryRun,
-						Settings:     *settings,
-					})
 					beginTime := time.Now()
 					scans := runner.Scan(image)
 
@@ -509,7 +515,7 @@ output and summaries to the S3 bucket and key prefix configured for use.`,
 						S3Bucket:    s3Bucket,
 						S3KeyPrefix: s3KeyPrefix,
 					})
-					if err := reporter.Report(scanTools, scans, beginTime); err != nil {
+					if err := reporter.Report(runner.Tools(), scans, beginTime); err != nil {
 						return err
 					}
 

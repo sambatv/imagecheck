@@ -7,7 +7,9 @@ import (
 )
 
 // TrufflehogScanner is a struct that represents a trufflehog scanner.
-type TrufflehogScanner struct{}
+type TrufflehogScanner struct {
+	Settings *ScanSettings
+}
 
 // Version returns the version of the trufflehog scanner application.
 func (s TrufflehogScanner) Version() string {

@@ -8,7 +8,9 @@ import (
 )
 
 // TrivyScanner is a struct that represents a trivy scanner.
-type TrivyScanner struct{}
+type TrivyScanner struct {
+	Settings *ScanSettings
+}
 
 // Version returns the version of the trivy scanner application.
 func (s TrivyScanner) Version() string {

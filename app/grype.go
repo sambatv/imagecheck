@@ -8,7 +8,9 @@ import (
 )
 
 // GrypeScanner is a struct that represents a grype scanner.
-type GrypeScanner struct{}
+type GrypeScanner struct {
+	Settings *ScanSettings
+}
 
 // Version returns the version of the grype scanner application.
 func (s GrypeScanner) Version() string {

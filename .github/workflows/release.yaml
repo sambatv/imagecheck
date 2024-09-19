@@ -67,25 +67,25 @@ jobs:
 
       - name: Build binary tarball for Linux/Intel
         run: |
-          GOOS=linux GOARCH=amd64 go build -ldflags "-X github.com/imagecheck/app.Version=${{ steps.get_version.outputs.VERSION }}" -o build/linux/amd64/imagecheck .
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X github.com/imagecheck/app.Version=${{ steps.get_version.outputs.VERSION }}" -tags netgo,osusergo -o build/linux/amd64/imagecheck .
           cp LICENSE README.md build/linux/amd64/
           tar -czf build/imagecheck_${{ steps.get_version.outputs.VERSION }}_linux_amd64.tar.gz -C build/linux/amd64 .
 
       - name: Build binary tarball for Linux/Arm
         run: |
-          GOOS=linux GOARCH=arm64 go build -ldflags "-X github.com/imagecheck/app.Version=${{ steps.get_version.outputs.VERSION }}" -o build/linux/arm64/imagecheck .
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "-X github.com/imagecheck/app.Version=${{ steps.get_version.outputs.VERSION }}" -tags netgo,osusergo -o build/linux/arm64/imagecheck .
           cp LICENSE README.md build/linux/arm64/
           tar -czf build/imagecheck_${{ steps.get_version.outputs.VERSION }}_linux_arm64.tar.gz -C build/linux/arm64 .
 
       - name: Build binary tarball for macOS/Intel
         run: |
-          GOOS=darwin GOARCH=amd64 go build -ldflags "-X github.com/imagecheck/app.Version=${{ steps.get_version.outputs.VERSION }}" -o build/darwin/amd64/imagecheck .
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "-X github.com/imagecheck/app.Version=${{ steps.get_version.outputs.VERSION }}" -tags netgo,osusergo -o build/darwin/amd64/imagecheck .
           cp LICENSE README.md build/darwin/amd64/
           tar -czf build/imagecheck_${{ steps.get_version.outputs.VERSION }}_darwin_amd64.tar.gz -C build/darwin/amd64 .
 
       - name: Build binary tarball for macOS/Apple Silicon
         run: |
-          GOOS=darwin GOARCH=arm64 go build -ldflags "-X github.com/imagecheck/app.Version=${{ steps.get_version.outputs.VERSION }}" -o build/darwin/arm64/imagecheck .
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags "-X github.com/imagecheck/app.Version=${{ steps.get_version.outputs.VERSION }}" -tags netgo,osusergo -o build/darwin/arm64/imagecheck .
           cp LICENSE README.md build/darwin/arm64/
           tar -czf build/imagecheck_${{ steps.get_version.outputs.VERSION }}_darwin_arm64.tar.gz -C build/darwin/arm64 .
 

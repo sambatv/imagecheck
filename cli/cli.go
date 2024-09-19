@@ -496,7 +496,7 @@ output and summaries to the S3 bucket and key prefix configured for use.`,
 
 					// Print the table of scan results.
 					fmt.Println("\nRESULTS")
-					tbl := getScansTable(scans)
+					tbl := getScansTable(scans, verbose)
 					tbl.Print()
 					fmt.Println()
 
@@ -587,15 +587,27 @@ func getConfigTable(dryRun, verbose bool, severity string, ignoreIDs, ignoreFixS
 	return tbl
 }
 
-func getScansTable(scans []*app.Scan) table.Table {
-	tbl := table.New("Scan Tool", "Scan Type", "Scan Target",
-		"Total", "Critical", "High", "Medium", "Low", "Negligible", "Unknown", "Ignored",
-		"Exit", "Error")
+func getScansTable(scans []*app.Scan, verbose bool) table.Table {
+	var tbl table.Table
+	// Verbose output includes exit code and error message.
+	if verbose {
+		tbl = table.New("Scan Tool", "Scan Type", "Scan Target",
+			"Total", "Ignored", "Critical", "High", "Medium", "Low", "Negligible", "Unknown",
+			"Exit", "Error")
+	} else {
+		tbl = table.New("Scan Tool", "Scan Type", "Scan Target",
+			"Total", "Ignored", "Critical", "High", "Medium", "Low", "Negligible", "Unknown")
+	}
 	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
 	for _, scan := range scans {
-		tbl.AddRow(scan.Settings.ScanTool, scan.Settings.ScanType, scan.Target,
-			scan.NumTotal, scan.NumCritical, scan.NumHigh, scan.NumMedium, scan.NumLow, scan.NumNegligible, scan.NumUnknown, scan.NumIgnored,
-			scan.ExitCode, scan.Error)
+		if verbose {
+			tbl.AddRow(scan.Settings.ScanTool, scan.Settings.ScanType, scan.Target,
+				scan.NumTotal, scan.NumIgnored, scan.NumCritical, scan.NumHigh, scan.NumMedium, scan.NumLow, scan.NumNegligible, scan.NumUnknown,
+				scan.ExitCode, scan.Error)
+		} else {
+			tbl.AddRow(scan.Settings.ScanTool, scan.Settings.ScanType, scan.Target,
+				scan.NumTotal, scan.NumIgnored, scan.NumCritical, scan.NumHigh, scan.NumMedium, scan.NumLow, scan.NumNegligible, scan.NumUnknown)
+		}
 	}
 	return tbl
 }

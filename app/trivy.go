@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
-	"time"
 )
 
 // TrivyScanner is a struct that represents a trivy scanner.
@@ -60,33 +59,24 @@ func (s TrivyScanner) Scan(target string, settings *ScanSettings) *Scan {
 }
 
 func (s TrivyScanner) run(cmdline, target string, settings *ScanSettings) *Scan {
-	// Execute the scanner command line and calculate the duration.
-	beginTime := time.Now()
-	exitCode, stdout, err := execScanner(cmdline, settings)
-	durationSecs := time.Since(beginTime).Seconds()
+	// Execute the scanner command line.
+	scan := execScanner(cmdline, target, settings, false)
 
-	// Create a new scan object to return.
-	scan := NewScan(settings, target, cmdline, durationSecs, exitCode, stdout)
-
-	// If there was an error or is a dry run, there's nothing more to do.
-	if err != nil {
-		scan.Error = err.Error()
+	// If there was an error, is a dry run, or is in pipeline mode, there's nothing more to do.
+	if scan.Error != "" {
 		return scan
 	}
 	if settings.dryRun {
 		return scan
 	}
-
-	// Otherwise, parse the JSON output to get the number of defects.
-	var data map[string]any
-	if err := json.Unmarshal(stdout, &data); err != nil {
-		scan.Error = err.Error()
+	if !settings.pipelineMode {
 		return scan
 	}
 
+	// Otherwise, add defects in the JSON data to the scan.
 	switch settings.ScanType {
 	case "config":
-		results := data["Results"].([]any)
+		results := scan.data["Results"].([]any)
 		for _, result := range results {
 			misconfigurations := result.(map[string]any)["Misconfigurations"].([]any)
 			if settings.pipelineMode || settings.verbose {
@@ -98,7 +88,7 @@ func (s TrivyScanner) run(cmdline, target string, settings *ScanSettings) *Scan 
 			}
 		}
 	case "files":
-		results := data["Results"].([]any)
+		results := scan.data["Results"].([]any)
 		for _, result := range results {
 			vulnerabilities := result.(map[string]any)["Vulnerabilities"].([]any)
 			if settings.pipelineMode || settings.verbose {
@@ -123,6 +113,5 @@ func (s TrivyScanner) run(cmdline, target string, settings *ScanSettings) *Scan 
 			}
 		}
 	}
-	scan.Score()
 	return scan
 }

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
-	"time"
 )
 
 // GrypeScanner is a struct that represents a grype scanner.
@@ -47,17 +46,11 @@ func (s GrypeScanner) Scan(target string, settings *ScanSettings) *Scan {
 }
 
 func (s GrypeScanner) run(cmdline, target string, settings *ScanSettings) *Scan {
-	// Execute the scanner command line and calculate the duration.
-	beginTime := time.Now()
-	exitCode, stdout, err := execScanner(cmdline, settings)
-	durationSecs := time.Since(beginTime).Seconds()
-
-	// Create a new scan object to return.
-	scan := NewScan(settings, target, cmdline, durationSecs, exitCode, stdout)
+	// Execute the scanner command line.
+	scan := execScanner(cmdline, target, settings, false)
 
 	// If there was an error, is a dry run, or is in pipeline mode, there's nothing more to do.
-	if err != nil {
-		scan.Error = err.Error()
+	if scan.Error != "" {
 		return scan
 	}
 	if settings.dryRun {
@@ -67,15 +60,8 @@ func (s GrypeScanner) run(cmdline, target string, settings *ScanSettings) *Scan 
 		return scan
 	}
 
-	// Otherwise, parse the JSON output to get the number of defects.
-	var data map[string]any
-	if err := json.Unmarshal(stdout, &data); err != nil {
-		scan.Error = err.Error()
-		return scan
-	}
-
-	// Add defects to the scan.
-	matches := data["matches"].([]interface{})
+	// Otherwise, add defects in the JSON data to the scan.
+	matches := scan.data["matches"].([]interface{})
 	if settings.pipelineMode || settings.verbose {
 		fmt.Printf("defects: %d found\n", len(matches))
 	}
@@ -97,6 +83,5 @@ func (s GrypeScanner) run(cmdline, target string, settings *ScanSettings) *Scan 
 			FixState: fixState,
 		})
 	}
-	scan.Score()
 	return scan
 }

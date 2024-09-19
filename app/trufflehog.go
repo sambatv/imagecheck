@@ -1,11 +1,9 @@
 package app
 
 import (
-	"encoding/json"
 	"fmt"
 	"os/exec"
 	"strings"
-	"time"
 )
 
 // TrufflehogScanner is a struct that represents a trufflehog scanner.
@@ -46,17 +44,11 @@ func (s TrufflehogScanner) Scan(target string, settings *ScanSettings) *Scan {
 }
 
 func (s TrufflehogScanner) run(cmdline, target string, settings *ScanSettings) *Scan {
-	// Execute the scanner command line and calculate the duration.
-	beginTime := time.Now()
-	exitCode, stdout, err := execScanner(cmdline, settings)
-	durationSecs := time.Since(beginTime).Seconds()
-
-	// Create a new scan object to return.
-	scan := NewScan(settings, target, cmdline, durationSecs, exitCode, stdout)
+	// Execute the scanner command line.
+	scan := execScanner(cmdline, target, settings, true)
 
 	// If there was an error, is a dry run, or is in pipeline mode, there's nothing more to do.
-	if err != nil {
-		scan.Error = err.Error()
+	if scan.Error != "" {
 		return scan
 	}
 	if settings.dryRun {
@@ -66,32 +58,56 @@ func (s TrufflehogScanner) run(cmdline, target string, settings *ScanSettings) *
 		return scan
 	}
 
-	// Otherwise, parse the JSON output to get the number of defects.
-	scan.stdout = wrapJSONArray(scan.stdout)
-	var data []any
-	if err := json.Unmarshal(scan.stdout, &data); err != nil {
-		scan.Error = err.Error()
-		return scan
+	// Count the number of objects in JSON data. With trufflehog, every result is
+	// a potential vulnerability, which we will score as a critical defect if verified.
+	results := scan.data["results"].([]any)
+	if settings.verbose || settings.pipelineMode {
+		fmt.Printf("results: %d found\n", len(results))
 	}
+	for i, result := range results {
+		id := result.(map[string]any)["DetectorName"].(string)
+		verified := result.(map[string]any)["Verified"].(bool)
+		verifiedStr := "verified"
+		if !verified {
+			verifiedStr = "unverified"
+		}
+		if settings.verbose || settings.pipelineMode {
+			fmt.Printf("result %d: %s %s\n", i, id, verifiedStr)
+		}
 
-	// Count the number of objects in output. With trufflehog, every object is a
-	// vulnerability, which we will score as a critical vulnerability.
-	scan.NumCritical = len(data)
-	scan.Failed = scan.NumCritical > 0
-	fmt.Printf("defects: %d found\n", scan.NumCritical)
+		// Treat unverified results as unknown defects.
+		severity := "unknown"
+		if verified {
+			severity = "critical"
+		}
+
+		scan.defects = append(scan.defects, Defect{
+			ID:       id,
+			Severity: severity,
+		})
+
+		if !verified && (settings.verbose || settings.pipelineMode) {
+			fmt.Printf("ignored unverified result: %s\n", id)
+		}
+	}
 	return scan
 }
 
-// wrapJSONArray wraps the given bytes in a JSON array.
+// wrapJSONItems wraps the given bytes in a JSON array in an enclosing object.
 // This is necessary because trufflehog outputs one JSON object per line with
-// no comma delimiters between them, which is not a valid JSON doc.
-func wrapJSONArray(bytes []byte) []byte {
+// no comma delimiters between them, which is not a valid JSON doc, and the
+// common data deserialization in execScanner expects a JSON object.
+func wrapJSONItems(bytes []byte) []byte {
 	s := strings.TrimSpace(string(bytes))
-	lines := strings.Split(s, "\n")
-	if len(lines) == 0 {
-		s = fmt.Sprintf("[%s]", s)
-	} else {
-		s = fmt.Sprintf("[%s]", strings.Join(lines, ","))
+	defects := strings.Split(s, "\n")
+	if len(defects) > 0 {
+		s = strings.Join(defects, ",\n    ")
 	}
+	const wrapFmt = `{
+  "results": [
+    %s
+  ]
+}`
+	s = fmt.Sprintf(wrapFmt, s)
 	return []byte(s)
 }

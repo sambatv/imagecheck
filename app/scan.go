@@ -35,18 +35,26 @@ type Scan struct {
 	NumIgnored    int           `json:"num_ignored"`
 	S3URL         string        `json:"s3_url"`
 	stdout        []byte
+	data          map[string]any
 	defects       []Defect
 }
 
 // NewScan creates a new Scan object.
-func NewScan(settings *ScanSettings, target, cmdline string, durationSecs float64, exitCode int, stdout []byte) *Scan {
+func NewScan(settings *ScanSettings, target, cmdline string, durationSecs float64, err error, exitCode int, stdout []byte, data map[string]any) *Scan {
+	var errStr string
+	if err != nil {
+		errStr = err.Error()
+	}
+
 	return &Scan{
 		Settings:     settings,
 		Target:       target,
 		Cmdline:      cmdline,
 		DurationSecs: durationSecs,
+		Error:        errStr,
 		ExitCode:     exitCode,
 		stdout:       stdout,
+		data:         data,
 		defects:      make([]Defect, 0),
 	}
 }

@@ -1,11 +1,13 @@
 package app
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 // ScanRunnerConfig represents the configuration for a ScanRunner.
@@ -41,8 +43,10 @@ func (r ScanRunner) Scan(image string) []*Scan {
 		scanSettings.severity = r.cfg.Severity
 		scanSettings.verbose = r.cfg.Verbose
 
-		// Run the scan.
-		return scanToolsRegistry[scanTool].Scan(scanTarget, scanSettings)
+		// Run the scan, score it, and return it.
+		scan := scanToolsRegistry[scanTool].Scan(scanTarget, scanSettings)
+		scan.Score()
+		return scan
 	}
 
 	// Run scans based on scan settings.
@@ -50,7 +54,7 @@ func (r ScanRunner) Scan(image string) []*Scan {
 	for _, setting := range r.cfg.Settings.ScanSettings {
 		// Skip scan if disabled in settings.
 		if setting.Disabled {
-			if r.cfg.Verbose {
+			if r.cfg.Verbose || r.cfg.PipelineMode {
 				fmt.Printf("skipping disabled scan: %s %s\n", setting.ScanTool, setting.ScanType)
 			}
 			continue
@@ -85,10 +89,10 @@ var scanToolsRegistry = map[string]ScanTool{
 }
 
 // execScanner executes a scan tool command line per its settings and returns its exit code, stdout and stderr.
-func execScanner(cmdline string, settings *ScanSettings) (int, []byte, error) {
+func execScanner(cmdline, target string, settings *ScanSettings, wrapJsonItems bool) *Scan {
 	if settings.dryRun {
 		fmt.Println(cmdline)
-		return 0, []byte{}, nil
+		return nil
 	}
 
 	var (
@@ -111,8 +115,11 @@ func execScanner(cmdline string, settings *ScanSettings) (int, []byte, error) {
 		cmd.Stderr = os.Stderr
 	}
 
-	// Execute command and return its exit code, output, and any error.
-	if stdout, err = cmd.Output(); err != nil {
+	// Execute command and ignore any exit errors.
+	beginTime := time.Now()
+	stdout, err = cmd.Output()
+	durationSecs := time.Since(beginTime).Seconds()
+	if err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
 			err = nil
@@ -124,5 +131,18 @@ func execScanner(cmdline string, settings *ScanSettings) (int, []byte, error) {
 	if !settings.pipelineMode {
 		fmt.Println(string(stdout))
 	}
-	return exitCode, stdout, err
+
+	// If wrapping stdout JSON objects in array, do so.
+	if wrapJsonItems {
+		stdout = wrapJSONItems(stdout)
+	}
+
+	// Deserialize the scan results from the command's stdout.
+	data := make(map[string]any)
+	if err == nil {
+		err = json.Unmarshal(stdout, &data)
+	}
+
+	// Finally, return the scan results.
+	return NewScan(settings, target, cmdline, durationSecs, err, exitCode, stdout, data)
 }

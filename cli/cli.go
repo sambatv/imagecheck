@@ -533,7 +533,7 @@ output and summaries to the S3 bucket and key prefix configured for use.`,
 					// meet or exceed the severity specified in the fail flag.
 					if checkFailed(scans) {
 						// If we're ignoring failures, inform the user and return nil (exits 0).
-						if ignoreFailures {
+						if ignoreFailures || settings.IgnoreFailures {
 							fmt.Printf("%s severity %s threshold met or exceeded", metadata.Name, severity)
 							return nil
 						}

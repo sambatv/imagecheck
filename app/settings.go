@@ -14,6 +14,7 @@ type ScansSettings struct {
 	AppVersion      string          `json:"app_version"`
 	Disabled        bool            `json:"disabled"`
 	Severity        string          `json:"severity"`
+	IgnoreFailures  bool            `json:"ignore_failures"`
 	IgnoreIDs       []string        `json:"ignore_ids"`
 	IgnoreFixStates []string        `json:"ignore_fix_states"`
 	ScansSettings   []*ScanSettings `json:"scan_settings"`

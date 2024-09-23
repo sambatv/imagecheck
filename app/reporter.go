@@ -29,7 +29,8 @@ type ScanReporterConfig struct {
 
 // ScanReporter reports the results of scans.
 type ScanReporter struct {
-	cfg ScanReporterConfig
+	cfg    ScanReporterConfig
+	runner *ScanRunner
 }
 
 // NewScanReporter creates a new configured ScanReporter.

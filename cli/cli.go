@@ -71,6 +71,13 @@ var verboseFlag = cli.BoolFlag{
 	Category: "General",
 }
 
+var ignoreFailuresFlag = cli.BoolFlag{
+	Name:     "ignore-failures",
+	Usage:    "do not fail the scan if any defects or vulnerabilities are found",
+	EnvVars:  []string{fmt.Sprintf("%s_NO_FAIL", strings.ToUpper(metadata.Name))},
+	Category: "Scanning",
+}
+
 var severityFlag = cli.StringFlag{
 	Name:     "severity",
 	Aliases:  []string{"s"},
@@ -315,36 +322,37 @@ func New() *cli.App {
 				Name:  "scan",
 				Usage: "Checks image for defects and vulnerabilities",
 				Description: `This command checks a container image and all associated source code and
-configuration artifacts for defects and vulnerabilities. It is intended to be
-used in a CI/CD pipeline to ensure that images are safe to deploy, but is also
-useful for scanning changes by developers during local development workflows.
+configuration artifacts for defects and vulnerabilities using multiple scanner
+tools. 
 
-This command runs a series of scans on the repository and optionally on a
-container image. When run in a repository root directory with no arguments
-it performs the following scans:
- 
-* a grype filesystem scan of the repository
-* a trivy cfg scan of the repository, notably including the Dockerfile
-* a trivy filesystem scan of the repository
-* a trufflehog filesystem scan of the repository
+* grype
+* trivy
+* trufflehog
 
-If an optional image argument is provided it performs the following additional
-scans on that image:
+It is intended to be used in a CI/CD pipeline to ensure that images are
+safe to deploy, but is also useful for scanning changes by developers during
+local development workflows.
 
-* a grype image scan of the image
-* a trufflehog image scan of the image
-
-Only a single image argument is allowed.
+It accepts a single image argument.
 
 The --severity option specifies the severity level at which the application
 should fail the scan.  The default severity level is "medium", which is an
-ISO requirement for us. 
+ISO requirement for us.
 
 Valid --severity values include "critical", "high", "medium", and "low".
 
-The --ignore option specifies the fix states to ignore when reporting defects
+If the --ignore-failures option is provided, the application will not return a
+non-zero exit code if any defects or vulnerabilities are found. This is useful
+temporarily but should not be the common case, unless you simply want to be
+informed of defects when running in --pipeline mode.
+
+The --ignore-fix-state option specifies the fix states to ignore when reporting defects
 or vulnerabilities. Valid --ignore values include "fixed", "not-fixed",
 "wont-fix", and "unknown".
+
+The --ignore-id option specifies an id to ignore when reporting defects
+or vulnerabilities. These ids are dependent on the scan type, but are often
+CVE IDs.
 
 If the --dry-run option is provided, the scanner commands will not actually be
 run, and will simply be displayed.
@@ -365,6 +373,7 @@ output and summaries to the S3 bucket and key prefix configured for use.`,
 					&forceFlag,
 					&dryRunFlag,
 					&verboseFlag,
+					&ignoreFailuresFlag,
 					&severityFlag,
 					&ignoreIDsFlag,
 					&ignoreFixStatesFlag,
@@ -391,6 +400,7 @@ output and summaries to the S3 bucket and key prefix configured for use.`,
 					force := cCtx.Bool("force")
 					dryRun := cCtx.Bool("dry-run")
 					verbose := cCtx.Bool("verbose")
+					ignoreFailures := cCtx.Bool("ignore-failures")
 					severity := cCtx.String("severity")
 					ignoreIDs := cCtx.StringSlice("ignore-id")
 					ignoreFixStates := cCtx.StringSlice("ignore-fix-state")
@@ -522,8 +532,15 @@ output and summaries to the S3 bucket and key prefix configured for use.`,
 					// We're done, but first check to see if any defects or vulnerabilities
 					// meet or exceed the severity specified in the fail flag.
 					if checkFailed(scans) {
+						// If we're ignoring failures, inform the user and return nil (exits 0).
+						if ignoreFailures {
+							fmt.Printf("%s severity %s threshold met or exceeded", metadata.Name, severity)
+							return nil
+						}
+						// Otherwise, return an error (exits non-0).
 						return fmt.Errorf("%s severity %s threshold met or exceeded", metadata.Name, severity)
 					}
+					// All checks passed, no failures found. Inform the user and return nil (exits 0).
 					fmt.Printf("\n%s succeeded.\n", metadata.Name)
 					return nil
 				},

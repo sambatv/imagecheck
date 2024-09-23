@@ -195,6 +195,11 @@ Where:
 * `S3_BUCKET` is the name of the S3 bucket to save scan results
 * `IMAGE` is the name of the image to scan
 
+The `imagecheck scan` command returns `0` if all scans pass. Any non-zero value
+indicates a failure in one or more scans, which should be used to fail the build
+pipeline before pushing the built image to ECR. This behavior can be overridden
+with the `--ignore-failures` option.
+
 If the `--s3-bucket` option is configured, scan results are saved to that S3
 bucket, under the `--s3-key-prefix` option, defaulting to `imagecheck`.
 

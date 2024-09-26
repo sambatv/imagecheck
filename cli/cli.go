@@ -71,19 +71,19 @@ var verboseFlag = cli.BoolFlag{
 	Category: "General",
 }
 
-var ignoreFailuresFlag = cli.BoolFlag{
-	Name:     "ignore-failures",
-	Usage:    "do not fail the scan if any defects or vulnerabilities are found",
-	EnvVars:  []string{fmt.Sprintf("%s_NO_FAIL", strings.ToUpper(metadata.Name))},
-	Category: "Scanning",
-}
-
 var severityFlag = cli.StringFlag{
 	Name:     "severity",
 	Aliases:  []string{"s"},
 	Usage:    "fail check if any defects or vulnerabilities meets or exceeds the specified `VALUE`",
 	Value:    defaultSeverity,
 	EnvVars:  []string{fmt.Sprintf("%s_SEVERITY", strings.ToUpper(metadata.Name))},
+	Category: "Scanning",
+}
+
+var ignoreFailuresFlag = cli.BoolFlag{
+	Name:     "ignore-failures",
+	Usage:    "do not fail the scan if any defects or vulnerabilities are found",
+	EnvVars:  []string{fmt.Sprintf("%s_NO_FAIL", strings.ToUpper(metadata.Name))},
 	Category: "Scanning",
 }
 
@@ -172,8 +172,8 @@ func New() *cli.App {
 
 					// Fetch inputs from command line options.
 					settingsFile := cCtx.String("settings-file")
-					verbose := cCtx.Bool("verbose")
 					severity := cCtx.String("severity")
+					ignoreFailures := cCtx.Bool("ignore-failures")
 					ignoreIDs := cCtx.StringSlice("ignore-id")
 					ignoreFixStates := cCtx.StringSlice("ignore-fix-state")
 
@@ -183,13 +183,11 @@ func New() *cli.App {
 					}
 
 					// Create and save the settings file.
-					settings := app.NewScansSettings(metadata.Version, severity, ignoreIDs, ignoreFixStates)
+					settings := app.NewScansSettings(metadata.Version, severity, ignoreFailures, ignoreIDs, ignoreFixStates)
 					if err := app.SaveSettings(settings, settingsFile); err != nil {
 						return err
 					}
-					if verbose {
-						fmt.Printf("created %s\n", settingsFile)
-					}
+					fmt.Printf("created %s\n", settingsFile)
 					return nil
 				},
 			},
@@ -223,6 +221,7 @@ func New() *cli.App {
 					&settingsFileFlag,
 					&verboseFlag,
 					&severityFlag,
+					&ignoreFailuresFlag,
 					&ignoreIDsFlag,
 					&ignoreFixStatesFlag,
 				},
@@ -235,6 +234,7 @@ func New() *cli.App {
 					settingsFile := cCtx.String("settings-file")
 					verbose := cCtx.Bool("verbose")
 					severity := cCtx.String("severity")
+					ignoreFailures := cCtx.Bool("ignore-failures")
 					ignoreIDs := cCtx.StringSlice("ignore-id")
 					ignoreFixStates := cCtx.StringSlice("ignore-fix-state")
 
@@ -253,7 +253,7 @@ func New() *cli.App {
 						if verbose {
 							fmt.Println("Using default settings ...")
 						}
-						settings = app.NewScansSettings(metadata.Version, severity, ignoreIDs, ignoreFixStates)
+						settings = app.NewScansSettings(metadata.Version, severity, ignoreFailures, ignoreIDs, ignoreFixStates)
 					}
 					text, err := settings.ToJSON()
 					if err != nil {
@@ -271,6 +271,7 @@ func New() *cli.App {
 					&ignoreSettingsFlag,
 					&verboseFlag,
 					&severityFlag,
+					&ignoreFailuresFlag,
 					&ignoreIDsFlag,
 					&ignoreFixStatesFlag,
 				},
@@ -284,6 +285,7 @@ func New() *cli.App {
 					ignoreSettings := cCtx.Bool("ignore-settings")
 					verbose := cCtx.Bool("verbose")
 					severity := cCtx.String("severity")
+					ignoreFailures := cCtx.Bool("ignore-failures")
 					ignoreIDs := cCtx.StringSlice("ignore-id")
 					ignoreFixStates := cCtx.StringSlice("ignore-fix-state")
 
@@ -302,16 +304,12 @@ func New() *cli.App {
 						if verbose {
 							fmt.Println("Using default settings ...")
 						}
-						settings = app.NewScansSettings(metadata.Version, severity, ignoreIDs, ignoreFixStates)
+						settings = app.NewScansSettings(metadata.Version, severity, ignoreFailures, ignoreIDs, ignoreFixStates)
 					}
 
 					// Create scan runner.
 					runner := app.NewScanRunner(app.ScanRunnerConfig{
-						Severity:     severity,
-						IgnoreCVEs:   ignoreIDs,
-						IgnoreStates: ignoreFixStates,
-						Verbose:      verbose,
-						Settings:     *settings,
+						Settings: settings,
 					})
 					tbl := getScanToolsTable(runner.Tools())
 					tbl.Print()
@@ -373,8 +371,8 @@ output and summaries to the S3 bucket and key prefix configured for use.`,
 					&forceFlag,
 					&dryRunFlag,
 					&verboseFlag,
-					&ignoreFailuresFlag,
 					&severityFlag,
+					&ignoreFailuresFlag,
 					&ignoreIDsFlag,
 					&ignoreFixStatesFlag,
 					&pipelineFlag,
@@ -400,8 +398,8 @@ output and summaries to the S3 bucket and key prefix configured for use.`,
 					force := cCtx.Bool("force")
 					dryRun := cCtx.Bool("dry-run")
 					verbose := cCtx.Bool("verbose")
-					ignoreFailures := cCtx.Bool("ignore-failures")
 					severity := cCtx.String("severity")
+					ignoreFailures := cCtx.Bool("ignore-failures")
 					ignoreIDs := cCtx.StringSlice("ignore-id")
 					ignoreFixStates := cCtx.StringSlice("ignore-fix-state")
 					pipeline := cCtx.Bool("pipeline")
@@ -426,7 +424,7 @@ output and summaries to the S3 bucket and key prefix configured for use.`,
 						if verbose || pipeline {
 							fmt.Println("Using default settings ...")
 						}
-						settings = app.NewScansSettings(metadata.Version, severity, ignoreIDs, ignoreFixStates)
+						settings = app.NewScansSettings(metadata.Version, severity, ignoreFailures, ignoreIDs, ignoreFixStates)
 					}
 
 					// Exit early if disabled in settings.
@@ -459,13 +457,10 @@ output and summaries to the S3 bucket and key prefix configured for use.`,
 
 					// Create scan runner.
 					runner := app.NewScanRunner(app.ScanRunnerConfig{
-						Severity:     severity,
-						IgnoreCVEs:   ignoreIDs,
-						IgnoreStates: ignoreFixStates,
 						PipelineMode: pipeline,
 						Verbose:      verbose,
 						DryRun:       dryRun,
-						Settings:     *settings,
+						Settings:     settings,
 					})
 
 					// Inputs look good for processing, so let's continue on.
@@ -475,25 +470,23 @@ output and summaries to the S3 bucket and key prefix configured for use.`,
 						if err != nil {
 							return err
 						}
-						fmt.Println("SCAN SETTINGS")
+						fmt.Println("SETTINGS")
 						fmt.Printf("%s\n\n", settingsText)
 					}
 
 					// Next, print application details as configured.
 					if verbose || pipeline {
-						fmt.Printf("%s %s\n\n", metadata.Name, metadata.Version)
-
 						fmt.Println("BUILD")
 						tbl := getBuildInfoTable()
 						tbl.Print()
 						fmt.Println()
 
 						fmt.Println("CONFIG")
-						tbl = getConfigTable(dryRun, verbose, severity, ignoreIDs, ignoreFixStates, pipeline, repoID, buildID, cacheDir, s3Bucket, s3KeyPrefix)
+						tbl = getConfigTable(dryRun, verbose, severity, ignoreFailures, ignoreIDs, ignoreFixStates, pipeline, repoID, buildID, cacheDir, s3Bucket, s3KeyPrefix)
 						tbl.Print()
 						fmt.Println()
 
-						fmt.Println("SCAN TOOLS")
+						fmt.Println("SCANNERS")
 						tbl = getScanToolsTable(runner.Tools())
 						tbl.Print()
 						fmt.Println()
@@ -593,12 +586,13 @@ func getBuildInfoTable() table.Table {
 	return tbl
 }
 
-func getConfigTable(dryRun, verbose bool, severity string, ignoreIDs, ignoreFixStates []string, pipeline bool, repoID, buildID, cacheDir, s3Bucket, s3KeyPrefix string) table.Table {
-	tbl := table.New("Name", "Value")
+func getConfigTable(dryRun, verbose bool, severity string, ignoreFailures bool, ignoreIDs, ignoreFixStates []string, pipeline bool, repoID, buildID, cacheDir, s3Bucket, s3KeyPrefix string) table.Table {
+	tbl := table.New("Option", "Value")
 	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
 	tbl.AddRow("Dry Run", dryRun)
 	tbl.AddRow("Verbose", verbose)
 	tbl.AddRow("Severity", severity)
+	tbl.AddRow("Ignore Failures", ignoreFailures)
 	tbl.AddRow("Ignore CVS IDs", strings.Join(ignoreIDs, ", "))
 	tbl.AddRow("Ignore CVE Fix States ", strings.Join(ignoreFixStates, ", "))
 	tbl.AddRow("Pipeline Mode", pipeline)

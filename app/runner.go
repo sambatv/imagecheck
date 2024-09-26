@@ -9,10 +9,7 @@ type ScanRunnerConfig struct {
 	DryRun       bool
 	Verbose      bool
 	PipelineMode bool
-	Severity     string
-	IgnoreCVEs   []string
-	IgnoreStates []string
-	Settings     ScansSettings
+	Settings     *ScansSettings
 }
 
 // ScanRunner runs scans.
@@ -37,9 +34,11 @@ func NewScanRunner(cfg ScanRunnerConfig) *ScanRunner {
 
 		// Enrich the scan settings with the runtime configuration passed in from the command line.
 		scanSettings.dryRun = cfg.DryRun
-		scanSettings.pipelineMode = cfg.PipelineMode
-		scanSettings.severity = cfg.Severity
 		scanSettings.verbose = cfg.Verbose
+		scanSettings.pipelineMode = cfg.PipelineMode
+		scanSettings.severity = cfg.Settings.Severity
+		scanSettings.ignoreFixStates = cfg.Settings.IgnoreFixStates
+		scanSettings.ignoreIDs = cfg.Settings.IgnoreIDs
 		// Add the new scan tool to the registry.
 		scanTools[scanSettings.ScanTool] = newScanTool(scanSettings)
 	}

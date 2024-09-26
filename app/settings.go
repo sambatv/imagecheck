@@ -72,6 +72,7 @@ type ScanSettings struct {
 	verbose         bool
 	pipelineMode    bool
 	severity        string
+	ignoreFailures  bool
 	ignoreIDs       []string
 	ignoreFixStates []string
 }
@@ -87,7 +88,7 @@ func (s ScanSettings) IsIgnoredFixState(state string) bool {
 }
 
 // NewScansSettings creates a new ScansSettings object.
-func NewScansSettings(appVersion, severity string, ignoreIDs, ignoreStates []string) *ScansSettings {
+func NewScansSettings(appVersion, severity string, ignoreFailures bool, ignoreIDs, ignoreStates []string) *ScansSettings {
 	if ignoreIDs == nil {
 		ignoreIDs = make([]string, 0)
 	}
@@ -98,6 +99,7 @@ func NewScansSettings(appVersion, severity string, ignoreIDs, ignoreStates []str
 		AppVersion:      appVersion,
 		Disabled:        false,
 		Severity:        severity,
+		IgnoreFailures:  ignoreFailures,
 		IgnoreIDs:       ignoreIDs,
 		IgnoreFixStates: ignoreStates,
 		ScansSettings: []*ScanSettings{

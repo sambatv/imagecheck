@@ -13,7 +13,7 @@ type Defect struct {
 
 // String returns a string representation of a Defect.
 func (d Defect) String() string {
-	return fmt.Sprintf("%s %s %s", d.ID, d.Severity, d.FixState)
+	return fmt.Sprintf("id=%s severity=%s fix-state=%s", d.ID, d.Severity, d.FixState)
 }
 
 // Scan represents the results of a scan.

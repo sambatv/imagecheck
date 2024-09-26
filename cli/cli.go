@@ -32,117 +32,153 @@ var (
 // CLI application flags
 // ----------------------------------------------------------------------------
 
+// Options represents the command line options.
+type Options struct {
+	SettingsFile    string          `json:"settings_file"`
+	IgnoreSettings  bool            `json:"ignore_settings"`
+	Force           bool            `json:"force"`
+	DryRun          bool            `json:"dry_run"`
+	Verbose         bool            `json:"verbose"`
+	Severity        string          `json:"severity"`
+	IgnoreFailures  bool            `json:"ignore_failures"`
+	IgnoreIDs       cli.StringSlice `json:"ignore_ids"`
+	IgnoreFixStates cli.StringSlice `json:"ignore_fix_states"`
+	Pipeline        bool            `json:"pipeline"`
+	RepoID          string          `json:"repo_id"`
+	BuildID         string          `json:"build_id"`
+	CacheDir        string          `json:"cache_dir"`
+	S3Bucket        string          `json:"s3_bucket"`
+	S3KeyPrefix     string          `json:"s3_key_prefix"`
+}
+
+var options Options
+
 var settingsFileFlag = cli.StringFlag{
-	Name:     "settings-file",
-	Usage:    "settings file `PATH`",
-	Value:    defaultSettingsFile,
-	EnvVars:  []string{fmt.Sprintf("%s_SETTINGS_FILE", strings.ToUpper(metadata.Name))},
-	Category: "Scanning",
+	Name:        "settings-file",
+	Usage:       "settings file `PATH`",
+	Destination: &options.SettingsFile,
+	Value:       defaultSettingsFile,
+	EnvVars:     []string{fmt.Sprintf("%s_SETTINGS_FILE", strings.ToUpper(metadata.Name))},
+	Category:    "Scanning",
 }
 
 var ignoreSettingsFlag = cli.BoolFlag{
-	Name:     "ignore-settings",
-	Usage:    "ignore settings file and use default settings",
-	EnvVars:  []string{fmt.Sprintf("%s_IGNORE_SETTINGS", strings.ToUpper(metadata.Name))},
-	Category: "Scanning",
+	Name:        "ignore-settings",
+	Usage:       "ignore settings file and use default settings",
+	Destination: &options.IgnoreSettings,
+	EnvVars:     []string{fmt.Sprintf("%s_IGNORE_SETTINGS", strings.ToUpper(metadata.Name))},
+	Category:    "Scanning",
 }
 
 var forceFlag = cli.BoolFlag{
-	Name:     "force",
-	Aliases:  []string{"f"},
-	Usage:    "force the scan to run even if the git repository is dirty when in pipeline mode",
-	EnvVars:  []string{fmt.Sprintf("%s_FORCE", strings.ToUpper(metadata.Name))},
-	Category: "Scanning",
-	Hidden:   true,
+	Name:        "force",
+	Aliases:     []string{"f"},
+	Usage:       "force the scan to run even if the git repository is dirty when in pipeline mode",
+	Destination: &options.Force,
+	EnvVars:     []string{fmt.Sprintf("%s_FORCE", strings.ToUpper(metadata.Name))},
+	Category:    "Scanning",
+	Hidden:      true,
 }
 
 var dryRunFlag = cli.BoolFlag{
-	Name:     "dry-run",
-	Usage:    "perform a dry run without actually running the scans",
-	EnvVars:  []string{fmt.Sprintf("%s_DRY_RUN", strings.ToUpper(metadata.Name))},
-	Category: "Scanning",
+	Name:        "dry-run",
+	Usage:       "perform a dry run without actually running the scans",
+	Destination: &options.DryRun,
+	EnvVars:     []string{fmt.Sprintf("%s_DRY_RUN", strings.ToUpper(metadata.Name))},
+	Category:    "Scanning",
 }
 
 var verboseFlag = cli.BoolFlag{
-	Name:     "verbose",
-	Aliases:  []string{"v"},
-	Usage:    "show verbose output",
-	EnvVars:  []string{fmt.Sprintf("%s_VERBOSE", strings.ToUpper(metadata.Name))},
-	Category: "General",
+	Name:        "verbose",
+	Aliases:     []string{"v"},
+	Usage:       "show verbose output",
+	Destination: &options.Verbose,
+	EnvVars:     []string{fmt.Sprintf("%s_VERBOSE", strings.ToUpper(metadata.Name))},
+	Category:    "General",
 }
 
 var severityFlag = cli.StringFlag{
-	Name:     "severity",
-	Aliases:  []string{"s"},
-	Usage:    "fail check if any defects or vulnerabilities meets or exceeds the specified `VALUE`",
-	Value:    defaultSeverity,
-	EnvVars:  []string{fmt.Sprintf("%s_SEVERITY", strings.ToUpper(metadata.Name))},
-	Category: "Scanning",
+	Name:        "severity",
+	Aliases:     []string{"s"},
+	Usage:       "fail check if any defects or vulnerabilities meets or exceeds the specified `VALUE`",
+	Destination: &options.Severity,
+	Value:       defaultSeverity,
+	EnvVars:     []string{fmt.Sprintf("%s_SEVERITY", strings.ToUpper(metadata.Name))},
+	Category:    "Scanning",
 }
 
 var ignoreFailuresFlag = cli.BoolFlag{
-	Name:     "ignore-failures",
-	Usage:    "do not fail the scan if any defects or vulnerabilities are found",
-	EnvVars:  []string{fmt.Sprintf("%s_NO_FAIL", strings.ToUpper(metadata.Name))},
-	Category: "Scanning",
+	Name:        "ignore-failures",
+	Usage:       "do not fail the scan if any defects or vulnerabilities are found",
+	Destination: &options.IgnoreFailures,
+	EnvVars:     []string{fmt.Sprintf("%s_NO_FAIL", strings.ToUpper(metadata.Name))},
+	Category:    "Scanning",
 }
 
 var ignoreIDsFlag = cli.StringSliceFlag{
-	Name:     "ignore-id",
-	Usage:    "ignore vulnerabilities with id `ID`",
-	Category: "Scanning",
+	Name:        "ignore-id",
+	Usage:       "ignore vulnerabilities with id `ID`",
+	Destination: &options.IgnoreIDs,
+	Category:    "Scanning",
 }
 
 var ignoreFixStatesFlag = cli.StringSliceFlag{
-	Name:     "ignore-fix-state",
-	Usage:    "ignore vulnerabilities with fix state `STATE`",
-	Category: "Scanning",
+	Name:        "ignore-fix-state",
+	Usage:       "ignore vulnerabilities with fix state `STATE`",
+	Destination: &options.IgnoreFixStates,
+	Category:    "Scanning",
 }
 
 var pipelineFlag = cli.BoolFlag{
-	Name:     "pipeline",
-	Aliases:  []string{"p"},
-	Usage:    "run in pipeline mode",
-	EnvVars:  []string{fmt.Sprintf("%s_PIPELINE", strings.ToUpper(metadata.Name))},
-	Category: "General",
+	Name:        "pipeline",
+	Aliases:     []string{"p"},
+	Usage:       "run in pipeline mode",
+	Destination: &options.Pipeline,
+	EnvVars:     []string{fmt.Sprintf("%s_PIPELINE", strings.ToUpper(metadata.Name))},
+	Category:    "General",
 }
 
 var repoIDFlag = cli.StringFlag{
-	Name:     "repo-id",
-	Usage:    "repo `ID` of git repository containing application being scanned, e.g., org/repo",
-	Value:    metadata.GitRepoName,
-	EnvVars:  []string{fmt.Sprintf("%s_REPO_ID", strings.ToUpper(metadata.Name))},
-	Category: "Reporting",
+	Name:        "repo-id",
+	Usage:       "repo `ID` of git repository containing application being scanned, e.g., org/repo",
+	Destination: &options.RepoID,
+	Value:       metadata.GitRepoName,
+	EnvVars:     []string{fmt.Sprintf("%s_REPO_ID", strings.ToUpper(metadata.Name))},
+	Category:    "Reporting",
 }
 
 var buildIDFlag = cli.StringFlag{
-	Name:     "build-id",
-	Usage:    "build `ID` of git repository pipeline of application being scanned",
-	EnvVars:  []string{fmt.Sprintf("%s_BUILD_ID", strings.ToUpper(metadata.Name))},
-	Category: "Reporting",
+	Name:        "build-id",
+	Usage:       "build `ID` of git repository pipeline of application being scanned",
+	Destination: &options.BuildID,
+	EnvVars:     []string{fmt.Sprintf("%s_BUILD_ID", strings.ToUpper(metadata.Name))},
+	Category:    "Reporting",
 }
 
 var cacheDirFlag = cli.StringFlag{
-	Name:     "cache-dir",
-	Usage:    "cache directory `PATH` for S3 uploads in pipeline mode",
-	Value:    defaultCacheDir,
-	EnvVars:  []string{fmt.Sprintf("%s_CACHE_DIR", strings.ToUpper(metadata.Name))},
-	Category: "Reporting",
+	Name:        "cache-dir",
+	Usage:       "cache directory `PATH` for S3 uploads in pipeline mode",
+	Destination: &options.CacheDir,
+	Value:       defaultCacheDir,
+	EnvVars:     []string{fmt.Sprintf("%s_CACHE_DIR", strings.ToUpper(metadata.Name))},
+	Category:    "Reporting",
 }
 
 var s3BucketFlag = cli.StringFlag{
-	Name:     "s3-bucket",
-	Usage:    "bucket `NAME` to upload scan results to",
-	EnvVars:  []string{fmt.Sprintf("%s_S3_BUCKET", strings.ToUpper(metadata.Name))},
-	Category: "Reporting",
+	Name:        "s3-bucket",
+	Usage:       "bucket `NAME` to upload scan results to",
+	Destination: &options.S3Bucket,
+	EnvVars:     []string{fmt.Sprintf("%s_S3_BUCKET", strings.ToUpper(metadata.Name))},
+	Category:    "Reporting",
 }
 
 var s3KeyPrefixFlag = cli.StringFlag{
-	Name:     "s3-key-prefix",
-	Usage:    "bucket key `PREFIX` to upload scan results under",
-	Value:    metadata.Name,
-	EnvVars:  []string{fmt.Sprintf("%s_S3_KEY_PREFIX", strings.ToUpper(metadata.Name))},
-	Category: "Reporting",
+	Name:        "s3-key-prefix",
+	Usage:       "bucket key `PREFIX` to upload scan results under",
+	Destination: &options.S3KeyPrefix,
+	Value:       metadata.Name,
+	EnvVars:     []string{fmt.Sprintf("%s_S3_KEY_PREFIX", strings.ToUpper(metadata.Name))},
+	Category:    "Reporting",
 }
 
 // ----------------------------------------------------------------------------
@@ -170,24 +206,17 @@ func New() *cli.App {
 						return fmt.Errorf("too many arguments")
 					}
 
-					// Fetch inputs from command line options.
-					settingsFile := cCtx.String("settings-file")
-					severity := cCtx.String("severity")
-					ignoreFailures := cCtx.Bool("ignore-failures")
-					ignoreIDs := cCtx.StringSlice("ignore-id")
-					ignoreFixStates := cCtx.StringSlice("ignore-fix-state")
-
 					// Ensure the desired settings file does not already exist.
-					if fileExists(settingsFile) {
-						return fmt.Errorf("settings file exists: %s", settingsFile)
+					if fileExists(options.SettingsFile) {
+						return fmt.Errorf("settings file exists: %s", options.SettingsFile)
 					}
 
 					// Create and save the settings file.
-					settings := app.NewScansSettings(metadata.Version, severity, ignoreFailures, ignoreIDs, ignoreFixStates)
-					if err := app.SaveSettings(settings, settingsFile); err != nil {
+					settings := app.NewScansSettings(metadata.Version, options.Severity, options.IgnoreFailures, options.IgnoreIDs.Value(), options.IgnoreFixStates.Value())
+					if err := app.SaveSettings(settings, options.SettingsFile); err != nil {
 						return err
 					}
-					fmt.Printf("created %s\n", settingsFile)
+					fmt.Printf("created %s\n", options.SettingsFile)
 					return nil
 				},
 			},
@@ -230,30 +259,21 @@ func New() *cli.App {
 						return fmt.Errorf("no arguments allowed")
 					}
 
-					// Fetch inputs from command line options.
-					settingsFile := cCtx.String("settings-file")
-					verbose := cCtx.Bool("verbose")
-					severity := cCtx.String("severity")
-					ignoreFailures := cCtx.Bool("ignore-failures")
-					ignoreIDs := cCtx.StringSlice("ignore-id")
-					ignoreFixStates := cCtx.StringSlice("ignore-fix-state")
-
-					// Load the scan settings from the settings file as configured or
-					// create a new settings object as needed.
+					// Load the scan settings from the settings file as configured or create a new settings object as needed.
 					var err error
 					var settings *app.ScansSettings
-					if fileExists(settingsFile) {
-						if verbose {
-							fmt.Printf("Loading settings from %s ...\n", settingsFile)
+					if fileExists(options.SettingsFile) {
+						if options.Verbose {
+							fmt.Printf("Loading settings from %s ...\n", options.SettingsFile)
 						}
-						if settings, err = app.LoadSettings(settingsFile); err != nil {
+						if settings, err = app.LoadSettings(options.SettingsFile); err != nil {
 							return err
 						}
 					} else {
-						if verbose {
+						if options.Verbose {
 							fmt.Println("Using default settings ...")
 						}
-						settings = app.NewScansSettings(metadata.Version, severity, ignoreFailures, ignoreIDs, ignoreFixStates)
+						settings = app.NewScansSettings(metadata.Version, options.Severity, options.IgnoreFailures, options.IgnoreIDs.Value(), options.IgnoreFixStates.Value())
 					}
 					text, err := settings.ToJSON()
 					if err != nil {
@@ -280,31 +300,21 @@ func New() *cli.App {
 						return fmt.Errorf("no arguments allowed")
 					}
 
-					// Fetch inputs from command line options.
-					settingsFile := cCtx.String("settings-file")
-					ignoreSettings := cCtx.Bool("ignore-settings")
-					verbose := cCtx.Bool("verbose")
-					severity := cCtx.String("severity")
-					ignoreFailures := cCtx.Bool("ignore-failures")
-					ignoreIDs := cCtx.StringSlice("ignore-id")
-					ignoreFixStates := cCtx.StringSlice("ignore-fix-state")
-
-					// Load the scan settings from the settings file as configured or
-					// create a new settings object as needed.
+					// Load the scan settings from the settings file as configured or create a new settings object as needed.
 					var err error
 					var settings *app.ScansSettings
-					if fileExists(settingsFile) && !ignoreSettings {
-						if verbose {
-							fmt.Printf("Loading settings from %s ...\n", settingsFile)
+					if fileExists(options.SettingsFile) && !options.IgnoreSettings {
+						if options.Verbose {
+							fmt.Printf("Loading settings from %s ...\n", options.SettingsFile)
 						}
-						if settings, err = app.LoadSettings(settingsFile); err != nil {
+						if settings, err = app.LoadSettings(options.SettingsFile); err != nil {
 							return err
 						}
 					} else {
-						if verbose {
+						if options.Verbose {
 							fmt.Println("Using default settings ...")
 						}
-						settings = app.NewScansSettings(metadata.Version, severity, ignoreFailures, ignoreIDs, ignoreFixStates)
+						settings = app.NewScansSettings(metadata.Version, options.Severity, options.IgnoreFailures, options.IgnoreIDs.Value(), options.IgnoreFixStates.Value())
 					}
 
 					// Create scan runner.
@@ -392,39 +402,21 @@ output and summaries to the S3 bucket and key prefix configured for use.`,
 					}
 					image := cCtx.Args().First()
 
-					// Fetch other inputs from command line options.
-					settingsFile := cCtx.String("settings-file")
-					ignoreSettings := cCtx.Bool("ignore-settings")
-					force := cCtx.Bool("force")
-					dryRun := cCtx.Bool("dry-run")
-					verbose := cCtx.Bool("verbose")
-					severity := cCtx.String("severity")
-					ignoreFailures := cCtx.Bool("ignore-failures")
-					ignoreIDs := cCtx.StringSlice("ignore-id")
-					ignoreFixStates := cCtx.StringSlice("ignore-fix-state")
-					pipeline := cCtx.Bool("pipeline")
-					repoID := cCtx.String("repo-id")
-					buildID := cCtx.String("build-id")
-					cacheDir := cCtx.String("cache-dir")
-					s3Bucket := cCtx.String("s3-bucket")
-					s3KeyPrefix := cCtx.String("s3-key-prefix")
-
-					// Load the scan settings from the settings file as configured or
-					// create a new settings object as needed.
+					// Load the scan settings from the settings file as configured or create a new settings object as needed.
 					var err error
 					var settings *app.ScansSettings
-					if fileExists(settingsFile) && !ignoreSettings {
-						if verbose || pipeline {
-							fmt.Printf("Loading settings from %s ...\n", settingsFile)
+					if fileExists(options.SettingsFile) && !options.IgnoreSettings {
+						if options.Verbose || options.Pipeline {
+							fmt.Printf("Loading settings from %s ...\n", options.SettingsFile)
 						}
-						if settings, err = app.LoadSettings(settingsFile); err != nil {
+						if settings, err = app.LoadSettings(options.SettingsFile); err != nil {
 							return err
 						}
 					} else {
-						if verbose || pipeline {
+						if options.Verbose || options.Pipeline {
 							fmt.Println("Using default settings ...")
 						}
-						settings = app.NewScansSettings(metadata.Version, severity, ignoreFailures, ignoreIDs, ignoreFixStates)
+						settings = app.NewScansSettings(metadata.Version, options.Severity, options.IgnoreFailures, options.IgnoreIDs.Value(), options.IgnoreFixStates.Value())
 					}
 
 					// Exit early if disabled in settings.
@@ -434,38 +426,38 @@ output and summaries to the S3 bucket and key prefix configured for use.`,
 					}
 
 					// Ensure the --severity option is valid.
-					if !isValidSeverity(severity) {
-						return fmt.Errorf("invalid severity: %s. Chose one of %s", severity, strings.Join(validSeverities, ", "))
+					if !isValidSeverity(options.Severity) {
+						return fmt.Errorf("invalid severity: %s. Chose one of %s", options.Severity, strings.Join(validSeverities, ", "))
 					}
 
 					// Ensure --ignore-fix-state options are valid.
-					for _, ignoreFixState := range ignoreFixStates {
+					for _, ignoreFixState := range options.IgnoreFixStates.Value() {
 						if ignoreFixState != "" && !isValidIgnoreFixState(ignoreFixState) {
 							return fmt.Errorf("invalid ignore fix state: %s. Chose one of %s", ignoreFixState, strings.Join(validIgnoreFixStates, ", "))
 						}
 					}
 
 					// Ensure if we're running in pipeline mode, we have a build id.
-					if pipeline && buildID == "" {
+					if options.Pipeline && options.BuildID == "" {
 						return fmt.Errorf("--build-id required in pipeline mode")
 					}
 
 					// Ensure if we're running in pipeline mode, the repo is not in a dirty state (unless forced).
-					if pipeline && metadata.Build.Dirty && !force {
+					if options.Pipeline && metadata.Build.Dirty && !options.Force {
 						return fmt.Errorf("dirty git repository not allowed in pipeline mode")
 					}
 
 					// Create scan runner.
 					runner := app.NewScanRunner(app.ScanRunnerConfig{
-						PipelineMode: pipeline,
-						Verbose:      verbose,
-						DryRun:       dryRun,
+						PipelineMode: options.Pipeline,
+						Verbose:      options.Verbose,
+						DryRun:       options.DryRun,
 						Settings:     settings,
 					})
 
 					// Inputs look good for processing, so let's continue on.
 					// First, print the settings if we're running in pipeline mode.
-					if pipeline {
+					if options.Pipeline {
 						settingsText, err := settings.ToJSON()
 						if err != nil {
 							return err
@@ -475,14 +467,14 @@ output and summaries to the S3 bucket and key prefix configured for use.`,
 					}
 
 					// Next, print application details as configured.
-					if verbose || pipeline {
+					if options.Verbose || options.Pipeline {
 						fmt.Println("BUILD")
 						tbl := getBuildInfoTable()
 						tbl.Print()
 						fmt.Println()
 
-						fmt.Println("CONFIG")
-						tbl = getConfigTable(dryRun, verbose, severity, ignoreFailures, ignoreIDs, ignoreFixStates, pipeline, repoID, buildID, cacheDir, s3Bucket, s3KeyPrefix)
+						fmt.Println("OPTIONS")
+						tbl = getOptionsTable(&options)
 						tbl.Print()
 						fmt.Println()
 
@@ -492,31 +484,31 @@ output and summaries to the S3 bucket and key prefix configured for use.`,
 						fmt.Println()
 					}
 					// Get the start time timestamp, create a scan runner, and run the scans.
-					if verbose || pipeline {
+					if options.Verbose || options.Pipeline {
 						fmt.Println("Running scans ...")
 					}
 					beginTime := time.Now()
 					scans := runner.Scan(image)
 
 					// We're done if we're not running in pipeline mode or if running in dry run mode.
-					if !pipeline || dryRun {
+					if !options.Pipeline || options.DryRun {
 						return nil
 					}
 
 					// Print the table of scan results.
 					fmt.Println("\nRESULTS")
-					tbl := getScansTable(scans, verbose)
+					tbl := getScansTable(scans, options.Verbose)
 					tbl.Print()
 					fmt.Println()
 
 					// Create a new scan reporter and report the scans.
 					reporter := app.NewScanReporter(app.ScanReporterConfig{
-						CacheDir:    cacheDir,
-						Verbose:     verbose,
-						RepoID:      repoID,
-						BuildID:     buildID,
-						S3Bucket:    s3Bucket,
-						S3KeyPrefix: s3KeyPrefix,
+						CacheDir:    options.CacheDir,
+						Verbose:     options.Verbose,
+						RepoID:      options.RepoID,
+						BuildID:     options.BuildID,
+						S3Bucket:    options.S3Bucket,
+						S3KeyPrefix: options.S3KeyPrefix,
 					})
 					if err := reporter.Report(runner.Tools(), scans, beginTime); err != nil {
 						return err
@@ -526,12 +518,12 @@ output and summaries to the S3 bucket and key prefix configured for use.`,
 					// meet or exceed the severity specified in the fail flag.
 					if checkFailed(scans) {
 						// If we're ignoring failures, inform the user and return nil (exits 0).
-						if ignoreFailures || settings.IgnoreFailures {
-							fmt.Printf("%s severity %s threshold met or exceeded", metadata.Name, severity)
+						if options.IgnoreFailures || settings.IgnoreFailures {
+							fmt.Printf("%s severity %s threshold met or exceeded", metadata.Name, options.Severity)
 							return nil
 						}
 						// Otherwise, return an error (exits non-0).
-						return fmt.Errorf("%s severity %s threshold met or exceeded", metadata.Name, severity)
+						return fmt.Errorf("%s severity %s threshold met or exceeded", metadata.Name, options.Severity)
 					}
 					// All checks passed, no failures found. Inform the user and return nil (exits 0).
 					fmt.Printf("\n%s succeeded.\n", metadata.Name)
@@ -586,21 +578,21 @@ func getBuildInfoTable() table.Table {
 	return tbl
 }
 
-func getConfigTable(dryRun, verbose bool, severity string, ignoreFailures bool, ignoreIDs, ignoreFixStates []string, pipeline bool, repoID, buildID, cacheDir, s3Bucket, s3KeyPrefix string) table.Table {
+func getOptionsTable(options *Options) table.Table {
 	tbl := table.New("Option", "Value")
 	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
-	tbl.AddRow("Dry Run", dryRun)
-	tbl.AddRow("Verbose", verbose)
-	tbl.AddRow("Severity", severity)
-	tbl.AddRow("Ignore Failures", ignoreFailures)
-	tbl.AddRow("Ignore CVS IDs", strings.Join(ignoreIDs, ", "))
-	tbl.AddRow("Ignore CVE Fix States ", strings.Join(ignoreFixStates, ", "))
-	tbl.AddRow("Pipeline Mode", pipeline)
-	tbl.AddRow("Repo ID", repoID)
-	tbl.AddRow("Build ID", buildID)
-	tbl.AddRow("Cache Dir", cacheDir)
-	tbl.AddRow("S3 Bucket", s3Bucket)
-	tbl.AddRow("S3 Key Prefix", s3KeyPrefix)
+	tbl.AddRow("Dry Run", options.DryRun)
+	tbl.AddRow("Verbose", options.Verbose)
+	tbl.AddRow("Severity", options.Severity)
+	tbl.AddRow("Ignore Failures", options.IgnoreFailures)
+	tbl.AddRow("Ignore CVS IDs", strings.Join(options.IgnoreIDs.Value(), ", "))
+	tbl.AddRow("Ignore CVE Fix States ", strings.Join(options.IgnoreFixStates.Value(), ", "))
+	tbl.AddRow("Pipeline Mode", options.Pipeline)
+	tbl.AddRow("Repo ID", options.RepoID)
+	tbl.AddRow("Build ID", options.BuildID)
+	tbl.AddRow("Cache Dir", options.CacheDir)
+	tbl.AddRow("S3 Bucket", options.S3Bucket)
+	tbl.AddRow("S3 Key Prefix", options.S3KeyPrefix)
 	return tbl
 }
 

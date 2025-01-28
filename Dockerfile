@@ -1,4 +1,4 @@
-FROM golang:1.23.1-bookworm AS builder
+FROM golang:1.23.5-bookworm AS builder
 RUN apt update && apt upgrade -y && apt install curl git make -y
 RUN curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
 RUN curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin

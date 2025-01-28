@@ -33,14 +33,19 @@ func (s GrypeScanner) Scan(target string, settings *ScanSettings) *Scan {
 	if settings.pipelineMode {
 		outputOpt = "--output=json"
 	}
+	failOnOpt := fmt.Sprintf("--fail-on=%s", settings.severity)
+	ignoreStatesOpt := ""
+	if len(settings.ignoreFixStates) > 0 {
+		ignoreStatesOpt = fmt.Sprintf("--ignore-states=%s", strings.Join(settings.ignoreFixStates, ","))
+	}
 
 	// Scan the appropriate scan command line.
 	var cmdline string
 	switch settings.ScanType {
 	case "files":
-		cmdline = fmt.Sprintf("grype %s --fail-on=%s dir:%s", outputOpt, settings.severity, target)
+		cmdline = fmt.Sprintf("grype dir:%s %s %s %s", target, failOnOpt, outputOpt, ignoreStatesOpt)
 	case "image":
-		cmdline = fmt.Sprintf("grype %s --fail-on=%s %s", outputOpt, settings.severity, target)
+		cmdline = fmt.Sprintf("grype docker:%s %s %s %s", target, outputOpt, failOnOpt, ignoreStatesOpt)
 	default:
 		return &Scan{} // should never happen
 	}

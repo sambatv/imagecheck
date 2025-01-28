@@ -185,6 +185,8 @@ var s3KeyPrefixFlag = cli.StringFlag{
 // CLI application
 // ----------------------------------------------------------------------------
 
+var noArgsAllowedError = fmt.Errorf("no arguments allowed")
+
 // New creates a new cli application.
 func New() *cli.App {
 	return &cli.App{
@@ -225,7 +227,7 @@ func New() *cli.App {
 				Usage: "Shows application version",
 				Action: func(cCtx *cli.Context) error {
 					if cCtx.NArg() > 0 {
-						return fmt.Errorf("no arguments allowed")
+						return noArgsAllowedError
 					}
 					fmt.Println(metadata.Version)
 					return nil
@@ -236,7 +238,7 @@ func New() *cli.App {
 				Usage: "Shows application build information",
 				Action: func(cCtx *cli.Context) error {
 					if cCtx.NArg() > 0 {
-						return fmt.Errorf("no arguments allowed")
+						return noArgsAllowedError
 					}
 					tbl := getBuildInfoTable()
 					tbl.Print()
@@ -256,7 +258,7 @@ func New() *cli.App {
 				},
 				Action: func(cCtx *cli.Context) error {
 					if cCtx.NArg() > 0 {
-						return fmt.Errorf("no arguments allowed")
+						return noArgsAllowedError
 					}
 
 					// Load the scan settings from the settings file as configured or create a new settings object as needed.
@@ -297,7 +299,7 @@ func New() *cli.App {
 				},
 				Action: func(cCtx *cli.Context) error {
 					if cCtx.NArg() > 0 {
-						return fmt.Errorf("no arguments allowed")
+						return noArgsAllowedError
 					}
 
 					// Load the scan settings from the settings file as configured or create a new settings object as needed.
@@ -483,11 +485,11 @@ output and summaries to the S3 bucket and key prefix configured for use.`,
 						tbl.Print()
 						fmt.Println()
 					}
+
 					// Get the start time timestamp, create a scan runner, and run the scans.
 					if options.Verbose || options.Pipeline {
 						fmt.Println("Running scans ...")
 					}
-					beginTime := time.Now()
 					scans := runner.Scan(image)
 
 					// We're done if we're not running in pipeline mode or if running in dry run mode.
@@ -495,23 +497,35 @@ output and summaries to the S3 bucket and key prefix configured for use.`,
 						return nil
 					}
 
+					// Rerun the scans with human-readable output going to pipeline stdout for display.
+					beginTime := time.Now()
+					runner = app.NewScanRunner(app.ScanRunnerConfig{
+						PipelineMode: false,
+						Settings:     settings,
+					})
+					_ = runner.Scan(image)
+
 					// Print the table of scan results.
 					fmt.Println("\nRESULTS")
 					tbl := getScansTable(scans, options.Verbose)
 					tbl.Print()
 					fmt.Println()
 
-					// Create a new scan reporter and report the scans.
-					reporter := app.NewScanReporter(app.ScanReporterConfig{
-						CacheDir:    options.CacheDir,
-						Verbose:     options.Verbose,
-						RepoID:      options.RepoID,
-						BuildID:     options.BuildID,
-						S3Bucket:    options.S3Bucket,
-						S3KeyPrefix: options.S3KeyPrefix,
-					})
-					if err := reporter.Report(runner.Tools(), scans, beginTime); err != nil {
-						return err
+					// Upload the scan results to S3 if bucket is provided.
+					if options.S3Bucket != "" {
+						reporter := app.NewScanReporter(app.ScanReporterConfig{
+							CacheDir:    options.CacheDir,
+							Verbose:     options.Verbose,
+							RepoID:      options.RepoID,
+							BuildID:     options.BuildID,
+							S3Bucket:    options.S3Bucket,
+							S3KeyPrefix: options.S3KeyPrefix,
+						})
+						if err := reporter.Report(runner.Tools(), scans, beginTime); err != nil {
+							return err
+						}
+					} else {
+						fmt.Println("S3 bucket not provided, skipping upload of scan results")
 					}
 
 					// We're done, but first check to see if any defects or vulnerabilities
@@ -585,7 +599,7 @@ func getOptionsTable(options *Options) table.Table {
 	tbl.AddRow("Verbose", options.Verbose)
 	tbl.AddRow("Severity", options.Severity)
 	tbl.AddRow("Ignore Failures", options.IgnoreFailures)
-	tbl.AddRow("Ignore CVS IDs", strings.Join(options.IgnoreIDs.Value(), ", "))
+	tbl.AddRow("Ignore CVE IDs", strings.Join(options.IgnoreIDs.Value(), ", "))
 	tbl.AddRow("Ignore CVE Fix States ", strings.Join(options.IgnoreFixStates.Value(), ", "))
 	tbl.AddRow("Pipeline Mode", options.Pipeline)
 	tbl.AddRow("Repo ID", options.RepoID)

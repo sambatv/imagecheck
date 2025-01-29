@@ -65,7 +65,7 @@ curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scr
 
 ### install.sh script
 
-You can install `imagecheck` from [GitHub releases](https://github.com/SambaTV/imagecheck/releases)
+You can install `imagecheck` from [GitHub releases](https://github.com/sambatv/imagecheck/releases)
 using the `install.sh` script:
 
 ```shell

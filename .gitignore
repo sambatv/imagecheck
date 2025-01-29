@@ -12,3 +12,9 @@ cache/
 
 # temp files
 tmp/
+
+# goreleaser files
+dist/
+
+# vscode files
+.vscode/

@@ -18,7 +18,7 @@ Its user documentation is available at https://sambatv.github.io/imagecheck.
 The `imagecheck` application is written in Golang, requiring Go 1.23 or later,
 and is organized as follows:
 
-* [`.github/workflows/release.yaml`](.github/workflows/release.yaml) - GitHub Actions release workflow
+* [`.github/workflows/`](.github/workflows) - GitHub Actions workflows
 * [`app/`](app) - application library source code
 * [`bin/`](bin) - application binary artifacts (ignored, populated by the Makefile `deps` and `build` targets)
 * [`cli/`](cli) - application command line interface source code
@@ -133,8 +133,8 @@ make image-scan
 ### Release workflow
 
 The release workflow is automated using [GitHub Actions](https://docs.github.com/en/actions).
-as defined in the [`.github/workflows/release.yaml`](.github/workflows/release.yaml)
-file when a new version tag on the `main` branch is pushed to the remote repository.
+as defined in the [`.github/workflows/`](.github/workflows) file when a new version tag on
+the `main` branch is pushed to the remote repository.
 
 The development process to make a release is as follows:
 

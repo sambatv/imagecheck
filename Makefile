@@ -15,7 +15,7 @@ APP_VERSION ?= $(shell cat VERSION)
 DOCKERFILE ?= Dockerfile
 
 # Set git repo identity
-GIT_COMMIT ?= $(shell git rev-parse --short HEAD)
+GIT_COMMIT ?= $(shell git rev-parse HEAD)
 GIT_DIRTY  ?= $(shell test -n "`git status --porcelain`" && echo "-dirty" || true)
 GIT_TAG = "$(GIT_COMMIT)$(GIT_DIRTY)"
 

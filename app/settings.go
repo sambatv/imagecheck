@@ -48,19 +48,6 @@ func (s ScansSettings) FindScanSetting(scanTool, scanType string) *ScanSettings 
 	return nil
 }
 
-//// EnabledScanTools returns a list of enabled ScanTool objects.
-//func (s ScansSettings) EnabledScanTools() map[string]ScanTool {
-//	scanners := make(map[string]ScanTool)
-//	for _, scanSetting := range s.ScansSettings {
-//		if scanSetting.Disabled {
-//			continue
-//		}
-//		tool := scanToolsRegistry[scanSetting.ScanTool]
-//		scanners[scanSetting.ScanTool] = tool
-//	}
-//	return scanners
-//}
-
 // ScanSettings represents the settings for a specific scan, some of which are
 // not persisted to disk in JSON format, but are set at runtime from the command
 // line options.

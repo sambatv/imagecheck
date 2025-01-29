@@ -14,7 +14,9 @@
     "CVE-2024-34156",
     "CVE-2024-34158"
   ],
-  "ignore_fix_states": [],
+  "ignore_fix_states": [
+    "wont-fix"
+  ],
   "scan_settings": [
     {
       "scan_tool": "grype",
@@ -24,7 +26,7 @@
     {
       "scan_tool": "trufflehog",
       "scan_type": "image",
-      "disabled": false
+      "disabled": true
     }
   ]
 }

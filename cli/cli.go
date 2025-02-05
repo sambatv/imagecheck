@@ -427,7 +427,7 @@ output and summaries to the S3 bucket and key prefix configured for use.`,
 						return nil
 					}
 
-					// Ensure the --severity option is valid.
+					// Ensure the '--severity' option is valid.
 					if !isValidSeverity(options.Severity) {
 						return fmt.Errorf("invalid severity: %s. Chose one of %s", options.Severity, strings.Join(validSeverities, ", "))
 					}

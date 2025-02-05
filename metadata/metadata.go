@@ -42,10 +42,7 @@ func init() {
 	if Build, err = getBuildInfo(); err != nil {
 		panic(err)
 	}
-	GitRepoName, err = getGitRepoName()
-	if err != nil {
-		panic(err)
-	}
+	GitRepoName, _ = getGitRepoName()
 }
 
 // BuildInfo represents the build information for the application.

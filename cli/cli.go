@@ -181,157 +181,125 @@ var s3KeyPrefixFlag = cli.StringFlag{
 	Category:    "Reporting",
 }
 
-// ----------------------------------------------------------------------------
-// CLI application
-// ----------------------------------------------------------------------------
+var initCommand = &cli.Command{
+	Name:  "init",
+	Usage: "Initializes imagecheck settings in current directory",
+	Flags: []cli.Flag{
+		&settingsFileFlag,
+		&verboseFlag,
+		&severityFlag,
+		&ignoreIDsFlag,
+		&ignoreFixStatesFlag,
+	},
+	Action: func(cCtx *cli.Context) error {
+		if cCtx.NArg() > 0 {
+			return fmt.Errorf("too many arguments")
+		}
 
-var noArgsAllowedError = fmt.Errorf("no arguments allowed")
+		// Ensure the desired settings file does not already exist.
+		if fileExists(options.SettingsFile) {
+			return fmt.Errorf("settings file exists: %s", options.SettingsFile)
+		}
 
-// New creates a new cli application.
-func New() *cli.App {
-	return &cli.App{
-		Name:                 metadata.Name,
-		EnableBashCompletion: true,
-		Commands: []*cli.Command{
-			{
-				Name:  "init",
-				Usage: "Initializes imagecheck settings in current directory",
-				Flags: []cli.Flag{
-					&settingsFileFlag,
-					&verboseFlag,
-					&severityFlag,
-					&ignoreIDsFlag,
-					&ignoreFixStatesFlag,
-				},
-				Action: func(cCtx *cli.Context) error {
-					if cCtx.NArg() > 0 {
-						return fmt.Errorf("too many arguments")
-					}
+		// Create and save the settings file.
+		settings := app.NewScansSettings(metadata.Version, options.Severity, options.IgnoreFailures, options.IgnoreIDs.Value(), options.IgnoreFixStates.Value())
+		if err := app.SaveSettings(settings, options.SettingsFile); err != nil {
+			return err
+		}
+		fmt.Printf("created %s\n", options.SettingsFile)
+		return nil
+	},
+}
 
-					// Ensure the desired settings file does not already exist.
-					if fileExists(options.SettingsFile) {
-						return fmt.Errorf("settings file exists: %s", options.SettingsFile)
-					}
+var versionCommand = &cli.Command{
+	Name:  "version",
+	Usage: "Shows application version",
+	Action: func(cCtx *cli.Context) error {
+		if cCtx.NArg() > 0 {
+			return noArgsAllowedError
+		}
+		fmt.Println(metadata.Version)
+		return nil
+	},
+}
 
-					// Create and save the settings file.
-					settings := app.NewScansSettings(metadata.Version, options.Severity, options.IgnoreFailures, options.IgnoreIDs.Value(), options.IgnoreFixStates.Value())
-					if err := app.SaveSettings(settings, options.SettingsFile); err != nil {
-						return err
-					}
-					fmt.Printf("created %s\n", options.SettingsFile)
-					return nil
-				},
-			},
-			{
-				Name:  "version",
-				Usage: "Shows application version",
-				Action: func(cCtx *cli.Context) error {
-					if cCtx.NArg() > 0 {
-						return noArgsAllowedError
-					}
-					fmt.Println(metadata.Version)
-					return nil
-				},
-			},
-			{
-				Name:  "buildinfo",
-				Usage: "Shows application build information",
-				Action: func(cCtx *cli.Context) error {
-					if cCtx.NArg() > 0 {
-						return noArgsAllowedError
-					}
-					tbl := getBuildInfoTable()
-					tbl.Print()
-					return nil
-				},
-			},
-			{
-				Name:  "settings",
-				Usage: "Shows application settings file content",
-				Flags: []cli.Flag{
-					&settingsFileFlag,
-					&verboseFlag,
-					&severityFlag,
-					&ignoreFailuresFlag,
-					&ignoreIDsFlag,
-					&ignoreFixStatesFlag,
-				},
-				Action: func(cCtx *cli.Context) error {
-					if cCtx.NArg() > 0 {
-						return noArgsAllowedError
-					}
+var buildInfoCommand = &cli.Command{
+	Name:  "buildinfo",
+	Usage: "Shows application build information",
+	Action: func(cCtx *cli.Context) error {
+		if cCtx.NArg() > 0 {
+			return noArgsAllowedError
+		}
+		tbl := getBuildInfoTable()
+		tbl.Print()
+		return nil
+	},
+}
 
-					// Load the scan settings from the settings file as configured or create a new settings object as needed.
-					var err error
-					var settings *app.ScansSettings
-					if fileExists(options.SettingsFile) {
-						if options.Verbose {
-							fmt.Printf("Loading settings from %s ...\n", options.SettingsFile)
-						}
-						if settings, err = app.LoadSettings(options.SettingsFile); err != nil {
-							return err
-						}
-					} else {
-						if options.Verbose {
-							fmt.Println("Using default settings ...")
-						}
-						settings = app.NewScansSettings(metadata.Version, options.Severity, options.IgnoreFailures, options.IgnoreIDs.Value(), options.IgnoreFixStates.Value())
-					}
-					text, err := settings.ToJSON()
-					if err != nil {
-						return err
-					}
-					fmt.Printf("%s\n", text)
-					return nil
-				},
-			},
-			{
-				Name:  "scanners",
-				Usage: "Shows scanner tools information",
-				Flags: []cli.Flag{
-					&settingsFileFlag,
-					&ignoreSettingsFlag,
-					&verboseFlag,
-					&severityFlag,
-					&ignoreFailuresFlag,
-					&ignoreIDsFlag,
-					&ignoreFixStatesFlag,
-				},
-				Action: func(cCtx *cli.Context) error {
-					if cCtx.NArg() > 0 {
-						return noArgsAllowedError
-					}
+var settingsCommand = &cli.Command{
+	Name:  "settings",
+	Usage: "Shows application settings file content",
+	Flags: []cli.Flag{
+		&settingsFileFlag,
+		&verboseFlag,
+		&severityFlag,
+		&ignoreFailuresFlag,
+		&ignoreIDsFlag,
+		&ignoreFixStatesFlag,
+	},
+	Action: func(cCtx *cli.Context) error {
+		if cCtx.NArg() > 0 {
+			return noArgsAllowedError
+		}
 
-					// Load the scan settings from the settings file as configured or create a new settings object as needed.
-					var err error
-					var settings *app.ScansSettings
-					if fileExists(options.SettingsFile) && !options.IgnoreSettings {
-						if options.Verbose {
-							fmt.Printf("Loading settings from %s ...\n", options.SettingsFile)
-						}
-						if settings, err = app.LoadSettings(options.SettingsFile); err != nil {
-							return err
-						}
-					} else {
-						if options.Verbose {
-							fmt.Println("Using default settings ...")
-						}
-						settings = app.NewScansSettings(metadata.Version, options.Severity, options.IgnoreFailures, options.IgnoreIDs.Value(), options.IgnoreFixStates.Value())
-					}
+		settings, err := getSettings()
+		if err != nil {
+			return err
+		}
+		text, err := settings.ToJSON()
+		if err != nil {
+			return err
+		}
+		fmt.Printf("%s\n", text)
+		return nil
+	},
+}
 
-					// Create scan runner.
-					runner := app.NewScanRunner(app.ScanRunnerConfig{
-						Settings: settings,
-					})
-					tbl := getScanToolsTable(runner.Tools())
-					tbl.Print()
-					return nil
-				},
-			},
-			{
-				Name:  "scan",
-				Usage: "Checks image for defects and vulnerabilities",
-				Description: `This command checks a container image and all associated source code and
+var scannersCommand = &cli.Command{
+	Name:  "scanners",
+	Usage: "Shows scanner tools information",
+	Flags: []cli.Flag{
+		&settingsFileFlag,
+		&ignoreSettingsFlag,
+		&verboseFlag,
+		&severityFlag,
+		&ignoreFailuresFlag,
+		&ignoreIDsFlag,
+		&ignoreFixStatesFlag,
+	},
+	Action: func(cCtx *cli.Context) error {
+		if cCtx.NArg() > 0 {
+			return noArgsAllowedError
+		}
+
+		settings, err := getSettings()
+		if err != nil {
+			return err
+		}
+
+		runner := app.NewScanRunner(app.ScanRunnerConfig{
+			Settings: settings,
+		})
+		tbl := getScanToolsTable(runner.Tools())
+		tbl.Print()
+		return nil
+	},
+}
+
+var scanCommand = &cli.Command{
+	Name:  "scan",
+	Usage: "Checks image for defects and vulnerabilities",
+	Description: `This command checks a container image and all associated source code and
 configuration artifacts for defects and vulnerabilities using multiple scanner
 tools. 
 
@@ -377,173 +345,178 @@ pipeline mode, provide the following additional options:
 
 When run in pipeline mode, the app requires AWS IAM permissions to upload scans
 output and summaries to the S3 bucket and key prefix configured for use.`,
-				Flags: []cli.Flag{
-					&settingsFileFlag,
-					&ignoreSettingsFlag,
-					&forceFlag,
-					&dryRunFlag,
-					&verboseFlag,
-					&severityFlag,
-					&ignoreFailuresFlag,
-					&ignoreIDsFlag,
-					&ignoreFixStatesFlag,
-					&pipelineFlag,
-					&repoIDFlag,
-					&buildIDFlag,
-					&cacheDirFlag,
-					&s3BucketFlag,
-					&s3KeyPrefixFlag,
-				},
-				Action: func(cCtx *cli.Context) error {
-					// Ensure a single image argument is provided.
-					if cCtx.NArg() == 0 {
-						return fmt.Errorf("missing image argument")
-					}
-					if cCtx.NArg() > 1 {
-						return fmt.Errorf("too many image arguments")
-					}
-					image := cCtx.Args().First()
+	Flags: []cli.Flag{
+		&settingsFileFlag,
+		&ignoreSettingsFlag,
+		&forceFlag,
+		&dryRunFlag,
+		&verboseFlag,
+		&severityFlag,
+		&ignoreFailuresFlag,
+		&ignoreIDsFlag,
+		&ignoreFixStatesFlag,
+		&pipelineFlag,
+		&repoIDFlag,
+		&buildIDFlag,
+		&cacheDirFlag,
+		&s3BucketFlag,
+		&s3KeyPrefixFlag,
+	},
+	Action: func(cCtx *cli.Context) error {
+		if cCtx.NArg() == 0 {
+			return fmt.Errorf("missing image argument")
+		}
+		if cCtx.NArg() > 1 {
+			return fmt.Errorf("too many image arguments")
+		}
+		image := cCtx.Args().First()
 
-					// Load the scan settings from the settings file as configured or create a new settings object as needed.
-					var err error
-					var settings *app.ScansSettings
-					if fileExists(options.SettingsFile) && !options.IgnoreSettings {
-						if options.Verbose || options.Pipeline {
-							fmt.Printf("Loading settings from %s ...\n", options.SettingsFile)
-						}
-						if settings, err = app.LoadSettings(options.SettingsFile); err != nil {
-							return err
-						}
-					} else {
-						if options.Verbose || options.Pipeline {
-							fmt.Println("Using default settings ...")
-						}
-						settings = app.NewScansSettings(metadata.Version, options.Severity, options.IgnoreFailures, options.IgnoreIDs.Value(), options.IgnoreFixStates.Value())
-					}
+		settings, err := getSettings()
+		if err != nil {
+			return err
+		}
 
-					// Exit early if disabled in settings.
-					if settings.Disabled {
-						fmt.Println("exiting disabled application")
-						return nil
-					}
+		if settings.Disabled {
+			fmt.Println("exiting disabled application")
+			return nil
+		}
 
-					// Ensure the '--severity' option is valid.
-					if !isValidSeverity(options.Severity) {
-						return fmt.Errorf("invalid severity: %s. Chose one of %s", options.Severity, strings.Join(validSeverities, ", "))
-					}
+		// Ensure the '--severity' option is valid.
+		if !isValidSeverity(options.Severity) {
+			return fmt.Errorf("invalid severity: %s. Chose one of %s", options.Severity, strings.Join(validSeverities, ", "))
+		}
 
-					// Ensure --ignore-fix-state options are valid.
-					for _, ignoreFixState := range options.IgnoreFixStates.Value() {
-						if ignoreFixState != "" && !isValidIgnoreFixState(ignoreFixState) {
-							return fmt.Errorf("invalid ignore fix state: %s. Chose one of %s", ignoreFixState, strings.Join(validIgnoreFixStates, ", "))
-						}
-					}
+		// Ensure --ignore-fix-state options are valid.
+		for _, ignoreFixState := range options.IgnoreFixStates.Value() {
+			if ignoreFixState != "" && !isValidIgnoreFixState(ignoreFixState) {
+				return fmt.Errorf("invalid ignore fix state: %s. Chose one of %s", ignoreFixState, strings.Join(validIgnoreFixStates, ", "))
+			}
+		}
 
-					// Ensure if we're running in pipeline mode, we have a build id.
-					if options.Pipeline && options.BuildID == "" {
-						return fmt.Errorf("--build-id required in pipeline mode")
-					}
+		// Ensure if we're running in pipeline mode, we have a build id.
+		if options.Pipeline && options.BuildID == "" {
+			return fmt.Errorf("--build-id required in pipeline mode")
+		}
 
-					// Ensure if we're running in pipeline mode, the repo is not in a dirty state (unless forced).
-					if options.Pipeline && metadata.Build.Dirty && !options.Force {
-						return fmt.Errorf("dirty git repository not allowed in pipeline mode")
-					}
+		// Ensure if we're running in pipeline mode, the repo is not in a dirty state (unless forced).
+		if options.Pipeline && metadata.Build.Dirty && !options.Force {
+			return fmt.Errorf("dirty git repository not allowed in pipeline mode")
+		}
 
-					// Create scan runner.
-					runner := app.NewScanRunner(app.ScanRunnerConfig{
-						PipelineMode: options.Pipeline,
-						Verbose:      options.Verbose,
-						DryRun:       options.DryRun,
-						Settings:     settings,
-					})
+		// Create scan runner.
+		runner := app.NewScanRunner(app.ScanRunnerConfig{
+			PipelineMode: options.Pipeline,
+			Verbose:      options.Verbose,
+			DryRun:       options.DryRun,
+			Settings:     settings,
+		})
 
-					// Inputs look good for processing, so let's continue on.
-					// First, print the settings if we're running in pipeline mode.
-					if options.Pipeline {
-						settingsText, err := settings.ToJSON()
-						if err != nil {
-							return err
-						}
-						fmt.Println("SETTINGS")
-						fmt.Printf("%s\n\n", settingsText)
-					}
+		// Inputs look good for processing, so let's continue on.
+		// First, print the settings if we're running in pipeline mode.
+		if options.Pipeline {
+			settingsText, err := settings.ToJSON()
+			if err != nil {
+				return err
+			}
+			fmt.Println("SETTINGS")
+			fmt.Printf("%s\n\n", settingsText)
+		}
 
-					// Next, print application details as configured.
-					if options.Verbose || options.Pipeline {
-						fmt.Println("BUILD")
-						tbl := getBuildInfoTable()
-						tbl.Print()
-						fmt.Println()
+		// Next, print application details as configured.
+		if options.Verbose || options.Pipeline {
+			fmt.Println("BUILD")
+			tbl := getBuildInfoTable()
+			tbl.Print()
+			fmt.Println()
 
-						fmt.Println("OPTIONS")
-						tbl = getOptionsTable(&options)
-						tbl.Print()
-						fmt.Println()
+			fmt.Println("OPTIONS")
+			tbl = getOptionsTable(&options)
+			tbl.Print()
+			fmt.Println()
 
-						fmt.Println("SCANNERS")
-						tbl = getScanToolsTable(runner.Tools())
-						tbl.Print()
-						fmt.Println()
-					}
+			fmt.Println("SCANNERS")
+			tbl = getScanToolsTable(runner.Tools())
+			tbl.Print()
+			fmt.Println()
+		}
 
-					// Get the start time timestamp, create a scan runner, and run the scans.
-					if options.Verbose || options.Pipeline {
-						fmt.Println("Running scans ...")
-					}
-					scans := runner.Scan(image)
+		// Get the start time timestamp, create a scan runner, and run the scans.
+		if options.Verbose || options.Pipeline {
+			fmt.Println("Running scans ...")
+		}
+		scans := runner.Scan(image)
 
-					// We're done if we're not running in pipeline mode or if running in dry run mode.
-					if !options.Pipeline || options.DryRun {
-						return nil
-					}
+		// We're done if we're not running in pipeline mode or if running in dry run mode.
+		if !options.Pipeline || options.DryRun {
+			return nil
+		}
 
-					// Rerun the scans with human-readable output going to pipeline stdout for display.
-					beginTime := time.Now()
-					runner = app.NewScanRunner(app.ScanRunnerConfig{
-						PipelineMode: false,
-						Settings:     settings,
-					})
-					_ = runner.Scan(image)
+		// Rerun the scans with human-readable output going to pipeline stdout for display.
+		beginTime := time.Now()
+		runner = app.NewScanRunner(app.ScanRunnerConfig{
+			PipelineMode: false,
+			Settings:     settings,
+		})
+		_ = runner.Scan(image)
 
-					// Print the table of scan results.
-					fmt.Println("\nRESULTS")
-					tbl := getScansTable(scans, options.Verbose)
-					tbl.Print()
-					fmt.Println()
+		// Print the table of scan results.
+		fmt.Println("\nRESULTS")
+		tbl := getScansTable(scans, options.Verbose)
+		tbl.Print()
+		fmt.Println()
 
-					// Upload the scan results to S3 if bucket is provided.
-					if options.S3Bucket != "" {
-						reporter := app.NewScanReporter(app.ScanReporterConfig{
-							CacheDir:    options.CacheDir,
-							Verbose:     options.Verbose,
-							RepoID:      options.RepoID,
-							BuildID:     options.BuildID,
-							S3Bucket:    options.S3Bucket,
-							S3KeyPrefix: options.S3KeyPrefix,
-						})
-						if err := reporter.Report(runner.Tools(), scans, beginTime); err != nil {
-							return err
-						}
-					} else {
-						fmt.Println("S3 bucket not provided, skipping upload of scan results")
-					}
+		// Upload the scan results to S3 if bucket is provided.
+		if options.S3Bucket != "" {
+			reporter := app.NewScanReporter(app.ScanReporterConfig{
+				CacheDir:    options.CacheDir,
+				Verbose:     options.Verbose,
+				RepoID:      options.RepoID,
+				BuildID:     options.BuildID,
+				S3Bucket:    options.S3Bucket,
+				S3KeyPrefix: options.S3KeyPrefix,
+			})
+			if err := reporter.Report(runner.Tools(), scans, beginTime); err != nil {
+				return err
+			}
+		} else {
+			fmt.Println("S3 bucket not provided, skipping upload of scan results")
+		}
 
-					// We're done, but first check to see if any defects or vulnerabilities
-					// meet or exceed the severity specified in the fail flag.
-					if checkFailed(scans) {
-						// If we're ignoring failures, inform the user and return nil (exits 0).
-						if options.IgnoreFailures || settings.IgnoreFailures {
-							fmt.Printf("%s severity %s threshold met or exceeded", metadata.Name, options.Severity)
-							return nil
-						}
-						// Otherwise, return an error (exits non-0).
-						return fmt.Errorf("%s severity %s threshold met or exceeded", metadata.Name, options.Severity)
-					}
-					// All checks passed, no failures found. Inform the user and return nil (exits 0).
-					fmt.Printf("\n%s succeeded.\n", metadata.Name)
-					return nil
-				},
-			},
+		// We're done, but first check to see if any defects or vulnerabilities
+		// meet or exceed the severity specified in the fail flag.
+		if checkFailed(scans) {
+			// If we're ignoring failures, inform the user and return nil (exits 0).
+			if options.IgnoreFailures || settings.IgnoreFailures {
+				fmt.Printf("%s severity %s threshold met or exceeded", metadata.Name, options.Severity)
+				return nil
+			}
+			// Otherwise, return an error (exits non-0).
+			return fmt.Errorf("%s severity %s threshold met or exceeded", metadata.Name, options.Severity)
+		}
+		// All checks passed, no failures found. Inform the user and return nil (exits 0).
+		fmt.Printf("\n%s succeeded.\n", metadata.Name)
+		return nil
+	},
+}
+
+// ----------------------------------------------------------------------------
+// CLI application
+// ----------------------------------------------------------------------------
+
+var noArgsAllowedError = fmt.Errorf("no arguments allowed")
+
+// New creates a new cli application.
+func New() *cli.App {
+	return &cli.App{
+		Name:                 metadata.Name,
+		EnableBashCompletion: true,
+		Commands: []*cli.Command{
+			initCommand,
+			versionCommand,
+			buildInfoCommand,
+			settingsCommand,
+			scannersCommand,
+			scanCommand,
 		},
 	}
 }
@@ -574,6 +547,19 @@ func isValidSeverity(severity string) bool {
 
 func isValidIgnoreFixState(ignoreState string) bool {
 	return slices.Contains(validIgnoreFixStates, ignoreState)
+}
+
+func getSettings() (*app.ScansSettings, error) {
+	if fileExists(options.SettingsFile) {
+		if options.Verbose {
+			fmt.Printf("Loading settings from %s ...\n", options.SettingsFile)
+		}
+		return app.LoadSettings(options.SettingsFile)
+	}
+	if options.Verbose {
+		fmt.Println("Using default settings ...")
+	}
+	return app.NewScansSettings(metadata.Version, options.Severity, options.IgnoreFailures, options.IgnoreIDs.Value(), options.IgnoreFixStates.Value()), nil
 }
 
 // ----------------------------------------------------------------------------

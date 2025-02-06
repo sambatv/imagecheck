@@ -51,9 +51,11 @@ func (s TrivyScanner) Scan(target string, settings *ScanSettings) *Scan {
 	var cmdline string
 	switch settings.ScanType {
 	case "config":
-		cmdline = fmt.Sprintf("trivy config %s %s %s", severityOpt, outputOpt, target)
+		cmdline = fmt.Sprintf("trivy config --ignore-unfixed %s %s %s", severityOpt, outputOpt, target)
 	case "files":
-		cmdline = fmt.Sprintf("trivy filesystem %s %s %s", severityOpt, outputOpt, target)
+		cmdline = fmt.Sprintf("trivy filesystem --ignore-unfixed %s %s %s", severityOpt, outputOpt, target)
+	case "image":
+		cmdline = fmt.Sprintf("trivy image --ignore-unfixed %s %s %s", severityOpt, outputOpt, target)
 	default:
 		return &Scan{} // should never happen
 	}
@@ -89,7 +91,7 @@ func (s TrivyScanner) run(cmdline, target string, settings *ScanSettings) *Scan 
 				severity = strings.ToLower(severity)
 			}
 		}
-	case "files":
+	case "files", "image":
 		results := scan.data["Results"].([]any)
 		for _, result := range results {
 			vulnerabilities := result.(map[string]any)["Vulnerabilities"].([]any)

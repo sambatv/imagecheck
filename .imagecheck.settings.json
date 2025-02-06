@@ -24,6 +24,11 @@
       "disabled": false
     },
     {
+      "scan_tool": "trivy",
+      "scan_type": "image",
+      "disabled": false
+    },
+    {
       "scan_tool": "trufflehog",
       "scan_type": "image",
       "disabled": true

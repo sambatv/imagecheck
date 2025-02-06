@@ -96,6 +96,11 @@ func NewScansSettings(appVersion, severity string, ignoreFailures bool, ignoreID
 				Disabled: false,
 			},
 			{
+				ScanTool: "trivy",
+				ScanType: "image",
+				Disabled: false,
+			},
+			{
 				ScanTool: "trufflehog",
 				ScanType: "image",
 				Disabled: false,

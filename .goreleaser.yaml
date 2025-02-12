@@ -21,8 +21,11 @@ builds:
     goos:
       - linux
       - darwin
+    goarch:
+      - amd64
+      - arm64
     ldflags:
-      - "-X github.com/sambatv/imagecheck/metadata.Version={{ .Version }}"
+      - -X github.com/sambatv/imagecheck/metadata.Version={{ .Version }}
     tags:
       - netgo
       - osusergo

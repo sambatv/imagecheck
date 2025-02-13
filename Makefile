@@ -17,11 +17,17 @@ DOCKERFILE ?= Dockerfile
 # Set git repo identity
 GIT_COMMIT ?= $(shell git rev-parse HEAD)
 GIT_DIRTY  ?= $(shell test -n "`git status --porcelain`" && echo "-dirty" || true)
-GIT_TAG = "$(GIT_COMMIT)$(GIT_DIRTY)"
+GIT_TAG = $(GIT_COMMIT)$(GIT_DIRTY)
 
 # Set Go compiler and linker flags
 GO_PACKAGE ?= github.com/sambatv/$(APP_NAME)
+# If the RELEASE environment variable is set to anything, additionally
+# use the loaded version for app version.
+ifneq ($(RELEASE),)
 GO_LDFLAGS = -ldflags "-X $(GO_PACKAGE)/metadata.Version=$(APP_VERSION)"
+else
+GO_LDFLAGS = -ldflags "-X $(GO_PACKAGE)/metadata.Version=$(GIT_TAG)"
+endif
 
 # Set image registry configuration.
 REGISTRY_HOSTNAME   = ghcr.io

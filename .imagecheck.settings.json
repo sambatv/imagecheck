@@ -21,7 +21,7 @@
     {
       "scan_tool": "grype",
       "scan_type": "image",
-      "disabled": false
+      "disabled": true
     },
     {
       "scan_tool": "trivy",

@@ -94,6 +94,9 @@ func (s TrivyScanner) run(cmdline, target string, settings *ScanSettings) *Scan 
 	case "files", "image":
 		results := scan.data["Results"].([]any)
 		for _, result := range results {
+			if _, ok := result.(map[string]any)["Vulnerabilities"]; !ok {
+				continue
+			}
 			vulnerabilities := result.(map[string]any)["Vulnerabilities"].([]any)
 			if settings.pipelineMode || settings.verbose {
 				fmt.Printf("defects: %d found\n", len(vulnerabilities))
